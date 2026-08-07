@@ -1,0 +1,23 @@
+# Variables de entorno (credenciales sensibles)
+.env
+.env.local
+.env.*.local
+
+# Dependencias
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Archivos de credenciales de Atlas
+atlas-credentials.env
