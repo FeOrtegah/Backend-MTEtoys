@@ -9,6 +9,25 @@ export const getProducts = async (req, res) => {
   }
 };
 
+// Crear varios productos de una vez (carga masiva)
+export const bulkCreateProducts = async (req, res) => {
+  try {
+    const { productos } = req.body;
+
+    if (!Array.isArray(productos) || productos.length === 0) {
+      return res.status(400).json({ message: "Debes enviar un array de productos" });
+    }
+
+    const creados = await Product.insertMany(productos, { ordered: false });
+    res.status(201).json({
+      message: `${creados.length} productos creados correctamente`,
+      productos: creados,
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 export const getProductById = async (req, res) => {
   try {
     const producto = await Product.findById(req.params.id);
