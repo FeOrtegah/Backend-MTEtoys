@@ -1,26 +1,16 @@
 import { Router } from "express";
-import {
-  getProducts,
-  getProductById,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  decreaseStock,
-  bulkCreateProducts,
-} from "../controllers/productController.js";
-import { protegerRuta } from "../middleware/auth.js";
+import { register, registerAdmin, login } from "../controllers/authController.js";
+import { protegerRuta, soloAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
-// Rutas públicas (el frontend de la tienda las necesita sin login)
-router.get("/", getProducts);
-router.get("/:id", getProductById);
-router.post("/bulk", protegerRuta, bulkCreateProducts);
+// Pública: cualquier cliente puede crear su cuenta
+router.post("/register", register);
 
-// Rutas protegidas (solo tú, como admin)
-router.post("/", protegerRuta, createProduct);
-router.put("/:id", protegerRuta, updateProduct);
-router.delete("/:id", protegerRuta, deleteProduct);
-router.patch("/:id/decrease-stock", protegerRuta, decreaseStock);
+// Login: sirve para admin y cliente
+router.post("/login", login);
+
+// Crear un admin nuevo — solo un admin ya logueado puede hacerlo
+router.post("/register-admin", protegerRuta, soloAdmin, registerAdmin);
 
 export default router;

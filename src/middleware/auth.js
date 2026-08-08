@@ -17,3 +17,11 @@ export const protegerRuta = (req, res, next) => {
     return res.status(401).json({ message: "Token inválido o expirado" });
   }
 };
+
+// Usar DESPUÉS de protegerRuta — exige además que el usuario sea admin.
+export const soloAdmin = (req, res, next) => {
+  if (req.usuario?.rol !== "admin") {
+    return res.status(403).json({ message: "Acceso solo para administradores" });
+  }
+  next();
+};
