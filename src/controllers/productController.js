@@ -9,6 +9,16 @@ export const getProducts = async (req, res) => {
   }
 };
 
+// Para el panel de admin: incluye inactivos y sin stock
+export const getAllProductsAdmin = async (req, res) => {
+  try {
+    const productos = await Product.find();
+    res.json(productos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Crear varios productos de una vez (carga masiva)
 export const bulkCreateProducts = async (req, res) => {
   try {
