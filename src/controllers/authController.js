@@ -46,6 +46,37 @@ export const registerAdmin = async (req, res) => {
   }
 };
 
+// Crea el PRIMER admin, sin necesitar estar logueado.
+// Se autobloquea: si ya existe cualquier admin en la base, rechaza la petición.
+export const bootstrapAdmin = async (req, res) => {
+  try {
+    const yaHayAdmin = await User.exists({ rol: "admin" });
+    if (yaHayAdmin) {
+      return res.status(403).json({ message: "Ya existe un admin, esta ruta está deshabilitada" });
+    }
+
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email y contraseña son obligatorios" });
+    }
+
+    const existe = await User.findOne({ email });
+    if (existe) {
+      return res.status(400).json({ message: "Ese usuario ya existe" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const usuario = new User({ email, password: passwordHash, rol: "admin" });
+    await usuario.save();
+
+    res.status(201).json({ message: "Primer admin creado correctamente" });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 // Login — sirve para admin y cliente. Devuelve token JWT + rol.
 export const login = async (req, res) => {
   try {

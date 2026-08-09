@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, registerAdmin, login } from "../controllers/authController.js";
+import { register, registerAdmin, login, bootstrapAdmin } from "../controllers/authController.js";
 import { protegerRuta, soloAdmin } from "../middleware/auth.js";
 
 const router = Router();
@@ -11,13 +11,9 @@ const loginLimiter = rateLimit({
   message: { message: "Demasiados intentos de login, intenta más tarde" },
 });
 
-// publica
 router.post("/register", register);
-
-// login admin y cliente
 router.post("/login", loginLimiter, login);
-
-// crar admin, solo admin puede 
 router.post("/register-admin", protegerRuta, soloAdmin, registerAdmin);
+router.post("/bootstrap-admin", bootstrapAdmin);
 
 export default router;
