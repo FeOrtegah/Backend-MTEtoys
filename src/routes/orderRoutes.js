@@ -1,22 +1,30 @@
 import { Router } from "express";
 import {
-  createOrder,
-  getOrders,
-  getOrderById,
-  confirmPayment,
-  cancelOrder,
-} from "../controllers/orderController.js";
+  getProducts,
+  getAllProductsAdmin,
+  getProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  hardDeleteProduct,
+  decreaseStock,
+  bulkCreateProducts,
+} from "../controllers/productController.js";
 import { protegerRuta, soloAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
-// Crear pedido debe ser público (lo hace el cliente al comprar)
-router.post("/", createOrder);
+// Públicas
+router.get("/", getProducts);
+router.get("/admin/all", protegerRuta, soloAdmin, getAllProductsAdmin);
+router.get("/:id", getProductById);
 
-// Ver pedidos y confirmar pago son cosas de admin
-router.get("/", protegerRuta, soloAdmin, getOrders);
-router.get("/:id", protegerRuta, soloAdmin, getOrderById);
-router.patch("/:id/confirm-payment", protegerRuta, soloAdmin, confirmPayment);
-router.patch("/:id/cancel", protegerRuta, soloAdmin, cancelOrder);
+// Admin
+router.post("/", protegerRuta, soloAdmin, createProduct);
+router.post("/bulk", protegerRuta, soloAdmin, bulkCreateProducts);
+router.put("/:id", protegerRuta, soloAdmin, updateProduct);
+router.delete("/:id", protegerRuta, soloAdmin, deleteProduct);
+router.delete("/:id/permanent", protegerRuta, soloAdmin, hardDeleteProduct);
+router.patch("/:id/decrease-stock", protegerRuta, soloAdmin, decreaseStock);
 
 export default router;

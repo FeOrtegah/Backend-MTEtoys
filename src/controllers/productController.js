@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import Combo from "../models/Combo.js";
 
 export const getProducts = async (req, res) => {
   try {
@@ -80,6 +81,30 @@ export const deleteProduct = async (req, res) => {
     );
     if (!producto) return res.status(404).json({ message: "Producto no encontrado" });
     res.json({ message: "Producto desactivado" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Elimina el producto de forma permanente (no reversible)
+export const hardDeleteProduct = async (req, res) => {
+  try {
+    const enUso = await Combo.findOne({
+      $or: [
+        { productoPrincipal: req.params.id },
+        { productoAdicional: req.params.id },
+      ],
+    });
+
+    if (enUso) {
+      return res.status(400).json({
+        message: `No se puede eliminar: el producto está usado en el combo "${enUso.nombre}". Elimina ese combo primero.`,
+      });
+    }
+
+    const producto = await Product.findByIdAndDelete(req.params.id);
+    if (!producto) return res.status(404).json({ message: "Producto no encontrado" });
+    res.json({ message: "Producto eliminado permanentemente" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
