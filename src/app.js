@@ -11,7 +11,21 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = ["https://mtetoys.cl", "https://www.mtetoys.cl"];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("No permitido por CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
