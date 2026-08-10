@@ -6,6 +6,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  hardDeleteProduct,
   decreaseStock,
   bulkCreateProducts,
 } from "../controllers/productController.js";
@@ -23,6 +24,7 @@ router.post("/", protegerRuta, soloAdmin, createProduct);
 router.post("/bulk", protegerRuta, soloAdmin, bulkCreateProducts);
 router.put("/:id", protegerRuta, soloAdmin, updateProduct);
 router.delete("/:id", protegerRuta, soloAdmin, deleteProduct);
+router.delete("/:id/permanent", protegerRuta, soloAdmin, hardDeleteProduct);
 router.patch("/:id/decrease-stock", protegerRuta, soloAdmin, decreaseStock);
 
 export default router;
