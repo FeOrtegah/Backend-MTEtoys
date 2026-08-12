@@ -1,6 +1,13 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { register, registerAdmin, login, bootstrapAdmin } from "../controllers/authController.js";
+import {
+  register,
+  registerAdmin,
+  login,
+  bootstrapAdmin,
+  getMe,
+  updateMe,
+} from "../controllers/authController.js";
 import { protegerRuta, soloAdmin } from "../middleware/auth.js";
 
 const router = Router();
@@ -15,5 +22,8 @@ router.post("/register", register);
 router.post("/login", loginLimiter, login);
 router.post("/register-admin", protegerRuta, soloAdmin, registerAdmin);
 router.post("/bootstrap-admin", bootstrapAdmin);
+
+router.get("/me", protegerRuta, getMe);
+router.put("/me", protegerRuta, updateMe);
 
 export default router;

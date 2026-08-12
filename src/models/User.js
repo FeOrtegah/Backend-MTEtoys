@@ -1,5 +1,16 @@
 import mongoose from "mongoose";
 
+const direccionSchema = new mongoose.Schema(
+  {
+    calle: { type: String, default: "" },
+    numero: { type: String, default: "" },
+    comuna: { type: String, default: "" },
+    region: { type: String, default: "" },
+    indicaciones: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -18,6 +29,9 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "cliente"],
       default: "cliente",
     },
+    nombre: { type: String, default: "" },
+    telefono: { type: String, default: "" },
+    direccion: { type: direccionSchema, default: () => ({}) },
   },
   { timestamps: true }
 );

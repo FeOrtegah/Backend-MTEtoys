@@ -5,7 +5,7 @@ import User from "../models/User.js";
 // Registro público — lo usan los clientes de la tienda. Siempre crea rol "cliente".
 export const register = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, nombre } = req.body;
 
     const existe = await User.findOne({ email });
     if (existe) {
@@ -15,7 +15,12 @@ export const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const usuario = new User({ email, password: passwordHash, rol: "cliente" });
+    const usuario = new User({
+      email,
+      password: passwordHash,
+      rol: "cliente",
+      nombre: nombre || "",
+    });
     await usuario.save();
 
     res.status(201).json({ message: "Cuenta creada correctamente" });
@@ -77,7 +82,7 @@ export const bootstrapAdmin = async (req, res) => {
   }
 };
 
-// Login — sirve para admin y cliente. Devuelve token JWT + rol.
+// Login — sirve para admin y cliente. Devuelve token JWT + datos básicos.
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -98,8 +103,42 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.json({ token, email: usuario.email, rol: usuario.rol });
+    res.json({
+      token,
+      email: usuario.email,
+      rol: usuario.rol,
+      nombre: usuario.nombre,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Devuelve el perfil completo del usuario logueado (sin password)
+export const getMe = async (req, res) => {
+  try {
+    const usuario = await User.findById(req.usuario.id).select("-password");
+    if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
+    res.json(usuario);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Actualiza nombre, teléfono y dirección del usuario logueado
+export const updateMe = async (req, res) => {
+  try {
+    const { nombre, telefono, direccion } = req.body;
+
+    const usuario = await User.findByIdAndUpdate(
+      req.usuario.id,
+      { nombre, telefono, direccion },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
+    res.json(usuario);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };
