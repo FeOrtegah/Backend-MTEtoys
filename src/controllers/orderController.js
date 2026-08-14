@@ -36,6 +36,18 @@ export const getOrders = async (req, res) => {
   }
 };
 
+// Devuelve los pedidos del usuario autenticado (según su email)
+export const getMyOrders = async (req, res) => {
+  try {
+    const pedidos = await Order.find({ "cliente.email": req.usuario.email }).sort({
+      createdAt: -1,
+    });
+    res.json(pedidos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getOrderById = async (req, res) => {
   try {
     const pedido = await Order.findById(req.params.id);

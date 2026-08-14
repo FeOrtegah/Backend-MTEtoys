@@ -1,30 +1,26 @@
 import { Router } from "express";
 import {
-  getProducts,
-  getAllProductsAdmin,
-  getProductById,
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  hardDeleteProduct,
-  decreaseStock,
-  bulkCreateProducts,
-} from "../controllers/productController.js";
+  createOrder,
+  getOrders,
+  getMyOrders,
+  getOrderById,
+  confirmPayment,
+  cancelOrder,
+} from "../controllers/orderController.js";
 import { protegerRuta, soloAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
-// Públicas
-router.get("/", getProducts);
-router.get("/admin/all", protegerRuta, soloAdmin, getAllProductsAdmin);
-router.get("/:id", getProductById);
+// Publica: el cliente crea su pedido al comprar 
+router.post("/", createOrder);
+
+// Cliente con sesion : sus propios pedidos
+router.get("/mine", protegerRuta, getMyOrders);
 
 // Admin
-router.post("/", protegerRuta, soloAdmin, createProduct);
-router.post("/bulk", protegerRuta, soloAdmin, bulkCreateProducts);
-router.put("/:id", protegerRuta, soloAdmin, updateProduct);
-router.delete("/:id", protegerRuta, soloAdmin, deleteProduct);
-router.delete("/:id/permanent", protegerRuta, soloAdmin, hardDeleteProduct);
-router.patch("/:id/decrease-stock", protegerRuta, soloAdmin, decreaseStock);
+router.get("/", protegerRuta, soloAdmin, getOrders);
+router.get("/:id", protegerRuta, getOrderById);
+router.patch("/:id/confirm-payment", protegerRuta, soloAdmin, confirmPayment);
+router.patch("/:id/cancel", protegerRuta, cancelOrder);
 
 export default router;
