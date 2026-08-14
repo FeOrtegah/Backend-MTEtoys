@@ -1,96 +1,532 @@
+import mongoose from "mongoose";
 import { webpayTransaction } from "../config/webpay.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
-// Inicia la transacción: el frontend ya creó el pedido (estado "pendiente")
-// y nos manda su id. Devolvemos la url y token de Webpay para redirigir al cliente.
+// =====================================================
+// INICIAR TRANSACCIÓN WEBPAY
+// =====================================================
+
 export const initTransaction = async (req, res) => {
   try {
     const { orderId } = req.body;
-    if (!orderId) return res.status(400).json({ message: "Falta orderId" });
 
-    const pedido = await Order.findById(orderId);
-    if (!pedido) return res.status(404).json({ message: "Pedido no encontrado" });
-
-    if (pedido.estado !== "pendiente") {
-      return res.status(400).json({ message: "Este pedido ya fue procesado" });
+    if (!orderId) {
+      return res.status(400).json({
+        message: "Falta orderId",
+      });
     }
 
-    const buyOrder = pedido._id.toString(); // ObjectId (24 chars) cabe en el límite de 26 de Transbank
+    // Validar que el ID sea un ObjectId válido
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        message: "orderId inválido",
+      });
+    }
+
+    const pedido = await Order.findById(orderId);
+
+    if (!pedido) {
+      return res.status(404).json({
+        message: "Pedido no encontrado",
+      });
+    }
+
+    // Solo se puede iniciar Webpay para pedidos pendientes
+    if (pedido.estado !== "pendiente") {
+      return res.status(400).json({
+        message: "Este pedido ya fue procesado",
+      });
+    }
+
+    const buyOrder = pedido._id.toString();
     const sessionId = pedido._id.toString();
+
+    // El monto SIEMPRE sale del pedido guardado en MongoDB
     const amount = Math.round(pedido.total);
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        message: "El monto del pedido no es válido",
+      });
+    }
+
     const returnUrl = `${process.env.BACKEND_URL}/api/webpay/confirm`;
 
-    const response = await webpayTransaction.create(buyOrder, sessionId, amount, returnUrl);
+    const response = await webpayTransaction.create(
+      buyOrder,
+      sessionId,
+      amount,
+      returnUrl
+    );
 
-    res.json({ url: response.url, token: response.token });
+    return res.json({
+      url: response.url,
+      token: response.token,
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error iniciando Webpay:", error);
+
+    return res.status(500).json({
+      message: "Error al iniciar el pago",
+    });
   }
 };
 
-// Transbank redirige aquí (POST) después de que el cliente paga, cancela o expira.
+
+// =====================================================
+// CONFIRMAR TRANSACCIÓN WEBPAY
+// =====================================================
+
 export const confirmTransaction = async (req, res) => {
   const frontendUrl = process.env.FRONTEND_URL;
-  const params = { ...req.query, ...req.body };
+
+  const params = {
+    ...req.query,
+    ...req.body,
+  };
 
   const token = params.token_ws;
+
   const tokenAbortado = params.TBK_TOKEN;
-  const ordenCompraAbortada = params.TBK_ORDEN_COMPRA;
 
-  // El cliente canceló el pago o se le acabó el tiempo (10 min) en Webpay
+  const ordenCompraAbortada =
+    params.TBK_ORDEN_COMPRA;
+
+
+  // ===================================================
+  // CLIENTE CANCELÓ EL PAGO
+  // ===================================================
+
   if (!token && tokenAbortado) {
-    if (ordenCompraAbortada) {
-      await Order.findByIdAndUpdate(ordenCompraAbortada, { estado: "cancelado" }).catch(() => {});
-    }
-    return res.redirect(`${frontendUrl}/pago-resultado?estado=cancelado`);
-  }
 
-  if (!token) {
-    return res.redirect(`${frontendUrl}/pago-resultado?estado=error`);
-  }
+    try {
 
-  try {
-    const response = await webpayTransaction.commit(token);
-    const pedido = await Order.findById(response.buy_order);
+      if (
+        ordenCompraAbortada &&
+        mongoose.Types.ObjectId.isValid(ordenCompraAbortada)
+      ) {
 
-    if (!pedido) {
-      return res.redirect(`${frontendUrl}/pago-resultado?estado=error`);
-    }
+        const pedido = await Order.findById(
+          ordenCompraAbortada
+        );
 
-    const pagoAprobado = response.status === "AUTHORIZED" && response.response_code === 0;
+        // Solamente cancelamos si todavía está pendiente
+        if (
+          pedido &&
+          pedido.estado === "pendiente"
+        ) {
+          pedido.estado = "cancelado";
 
-    if (pagoAprobado) {
-      for (const item of pedido.items) {
-        const producto = await Product.findById(item.producto);
-        if (producto) {
-          producto.stock -= item.cantidad;
-          await producto.save();
+          await pedido.save();
         }
       }
 
-      pedido.estado = "pagado";
-      pedido.codigoTransaccion = response.authorization_code || token;
-      await pedido.save();
+    } catch (error) {
 
-      return res.redirect(`${frontendUrl}/pago-resultado?estado=exito&pedido=${pedido._id}`);
+      console.error(
+        "Error cancelando pedido:",
+        error
+      );
     }
 
-    pedido.estado = "cancelado";
-    await pedido.save();
+    return res.redirect(
+      `${frontendUrl}/pago-resultado?estado=cancelado`
+    );
+  }
 
-    return res.redirect(`${frontendUrl}/pago-resultado?estado=rechazado&pedido=${pedido._id}`);
+
+  // ===================================================
+  // NO HAY TOKEN
+  // ===================================================
+
+  if (!token) {
+
+    return res.redirect(
+      `${frontendUrl}/pago-resultado?estado=error`
+    );
+  }
+
+
+  try {
+
+    // =================================================
+    // CONFIRMAR CON TRANSBANK
+    // =================================================
+
+    const response =
+      await webpayTransaction.commit(token);
+
+    console.log(
+      "Respuesta Webpay:",
+      response
+    );
+
+
+    // =================================================
+    // OBTENER PEDIDO
+    // =================================================
+
+    const buyOrder = response.buy_order;
+
+    if (!buyOrder) {
+
+      console.error(
+        "Webpay no devolvió buy_order"
+      );
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=error`
+      );
+    }
+
+
+    if (!mongoose.Types.ObjectId.isValid(buyOrder)) {
+
+      console.error(
+        "buy_order inválido:",
+        buyOrder
+      );
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=error`
+      );
+    }
+
+
+    const pedido =
+      await Order.findById(buyOrder);
+
+
+    if (!pedido) {
+
+      console.error(
+        "Pedido no encontrado:",
+        buyOrder
+      );
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=error`
+      );
+    }
+
+
+    // =================================================
+    // PROTECCIÓN CONTRA DOBLE PROCESAMIENTO
+    // =================================================
+
+    if (pedido.estado === "pagado") {
+
+      console.log(
+        `Pedido ${pedido._id} ya estaba pagado. No se descuenta stock nuevamente.`
+      );
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=exito&pedido=${pedido._id}`
+      );
+    }
+
+
+    // =================================================
+    // VALIDAR MONTO
+    // =================================================
+
+    const montoWebpay =
+      Number(response.amount);
+
+    const montoPedido =
+      Number(pedido.total);
+
+
+    if (
+      !Number.isFinite(montoWebpay) ||
+      !Number.isFinite(montoPedido) ||
+      montoWebpay !== montoPedido
+    ) {
+
+      console.error(
+        "Monto Webpay no coincide con pedido:",
+        {
+          montoWebpay,
+          montoPedido,
+          pedido: pedido._id,
+        }
+      );
+
+      // El pago no debe marcarse como pagado
+      if (pedido.estado === "pendiente") {
+
+        pedido.estado = "cancelado";
+
+        await pedido.save();
+      }
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=error`
+      );
+    }
+
+
+    // =================================================
+    // VALIDAR RESPUESTA DE WEBPAY
+    // =================================================
+
+    const pagoAprobado =
+      response.status === "AUTHORIZED" &&
+      Number(response.response_code) === 0;
+
+
+    // =================================================
+    // PAGO RECHAZADO
+    // =================================================
+
+    if (!pagoAprobado) {
+
+      if (pedido.estado === "pendiente") {
+
+        pedido.estado = "cancelado";
+
+        await pedido.save();
+      }
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=rechazado&pedido=${pedido._id}`
+      );
+    }
+
+
+    // =================================================
+    // PAGO APROBADO
+    // =================================================
+
+    /*
+     * Desde aquí necesitamos modificar:
+     *
+     * 1. Stock de todos los productos
+     * 2. Estado del pedido
+     * 3. Código de autorización
+     *
+     * Todo debe hacerse dentro de una transacción.
+     */
+
+    const session =
+      await mongoose.startSession();
+
+
+    try {
+
+      await session.withTransaction(
+        async () => {
+
+          // -------------------------------------------
+          // Volver a obtener el pedido dentro
+          // de la transacción
+          // -------------------------------------------
+
+          const pedidoActual =
+            await Order.findById(
+              pedido._id
+            ).session(session);
+
+
+          if (!pedidoActual) {
+
+            throw new Error(
+              "Pedido no encontrado dentro de la transacción"
+            );
+          }
+
+
+          // -------------------------------------------
+          // Protección adicional contra doble pago
+          // -------------------------------------------
+
+          if (
+            pedidoActual.estado === "pagado"
+          ) {
+
+            return;
+          }
+
+
+          // -------------------------------------------
+          // DESCONTAR STOCK
+          // -------------------------------------------
+
+          for (
+            const item of pedidoActual.items
+          ) {
+
+            const cantidad =
+              Number(item.cantidad);
+
+
+            if (
+              !Number.isInteger(cantidad) ||
+              cantidad <= 0
+            ) {
+
+              throw new Error(
+                `Cantidad inválida para ${item.nombre}`
+              );
+            }
+
+
+            /*
+             * findOneAndUpdate con:
+             *
+             * stock >= cantidad
+             *
+             * hace que MongoDB compruebe y descuente
+             * el stock en una sola operación.
+             */
+
+            const productoActualizado =
+              await Product.findOneAndUpdate(
+
+                {
+                  _id: item.producto,
+
+                  activo: true,
+
+                  stock: {
+                    $gte: cantidad,
+                  },
+                },
+
+                {
+                  $inc: {
+                    stock: -cantidad,
+                  },
+                },
+
+                {
+                  new: true,
+
+                  session,
+                }
+              );
+
+
+            // Si no encontramos el producto o
+            // no tiene suficiente stock,
+            // abortamos TODA la transacción.
+
+            if (!productoActualizado) {
+
+              throw new Error(
+                `Stock insuficiente para ${item.nombre}`
+              );
+            }
+          }
+
+
+          // -------------------------------------------
+          // MARCAR PEDIDO COMO PAGADO
+          // -------------------------------------------
+
+          pedidoActual.estado =
+            "pagado";
+
+
+          pedidoActual.codigoTransaccion =
+            response.authorization_code ||
+            token;
+
+
+          await pedidoActual.save({
+            session,
+          });
+        }
+      );
+
+
+      // -----------------------------------------------
+      // TRANSACCIÓN COMPLETADA
+      // -----------------------------------------------
+
+      console.log(
+        `Pedido ${pedido._id} pagado correctamente`
+      );
+
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=exito&pedido=${pedido._id}`
+      );
+
+
+    } catch (transactionError) {
+
+      console.error(
+        "Error procesando stock/pedido:",
+        transactionError
+      );
+
+
+      /*
+       * IMPORTANTE:
+       *
+       * Si el pago fue aprobado pero no pudimos
+       * descontar stock, NO marcamos el pedido
+       * como pagado.
+       *
+       * La transacción hace rollback automático.
+       */
+
+      return res.redirect(
+        `${frontendUrl}/pago-resultado?estado=error&pedido=${pedido._id}`
+      );
+
+    } finally {
+
+      await session.endSession();
+    }
+
+
   } catch (error) {
-    return res.redirect(`${frontendUrl}/pago-resultado?estado=error`);
+
+    console.error(
+      "Error confirmando Webpay:",
+      error
+    );
+
+
+    return res.redirect(
+      `${frontendUrl}/pago-resultado?estado=error`
+    );
   }
 };
 
-// Utilidad opcional para consultar el estado de una transacción por token
-export const getTransactionStatus = async (req, res) => {
+
+// =====================================================
+// CONSULTAR ESTADO DE TRANSACCIÓN
+// =====================================================
+
+export const getTransactionStatus = async (
+  req,
+  res
+) => {
+
   try {
-    const response = await webpayTransaction.status(req.params.token);
-    res.json(response);
+
+    const response =
+      await webpayTransaction.status(
+        req.params.token
+      );
+
+    return res.json(response);
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    console.error(
+      "Error consultando estado Webpay:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Error al consultar el estado de la transacción",
+    });
   }
 };
