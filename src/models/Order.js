@@ -1,89 +1,290 @@
 import mongoose from "mongoose";
 
 
-const orderItemSchema = new mongoose.Schema({
-  producto: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: true,
-  },
+// =====================================================
+// ITEM DEL PEDIDO
+// =====================================================
 
-  nombre: {
-    type: String,
-    required: true,
-  },
+const orderItemSchema = new mongoose.Schema(
+  {
+    producto: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
 
-  cantidad: {
-    type: Number,
-    required: true,
-    min: 1,
-  },
+    nombre: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-  precioUnitario: {
-    type: Number,
-    required: true,
-  },
-});
+    cantidad: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
 
+    precioUnitario: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+  },
+  { _id: false }
+);
+
+
+// =====================================================
+// DATOS DE FACTURACIÓN
+// =====================================================
+
+const facturacionSchema = new mongoose.Schema(
+  {
+    nombre: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+
+    rut: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+      maxlength: 12,
+    },
+
+    direccion: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 150,
+    },
+
+    numero: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 10,
+    },
+
+    departamento: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 20,
+    },
+
+    region: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+
+    comuna: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+  },
+  { _id: false }
+);
+
+
+// =====================================================
+// DATOS DE ENVÍO
+// =====================================================
+
+const envioSchema = new mongoose.Schema(
+  {
+    nombreReceptor: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+
+    telefono: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 20,
+    },
+
+    direccion: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 150,
+    },
+
+    numero: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 10,
+    },
+
+    departamento: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 20,
+    },
+
+    region: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+
+    comuna: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+
+    indicaciones: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 250,
+    },
+  },
+  { _id: false }
+);
+
+
+// =====================================================
+// PEDIDO
+// =====================================================
 
 const orderSchema = new mongoose.Schema(
   {
     cliente: {
-
       nombre: {
         type: String,
         required: true,
+        trim: true,
+        maxlength: 100,
       },
 
       email: {
         type: String,
         required: true,
+        trim: true,
+        lowercase: true,
+        maxlength: 150,
+      },
+
+      rut: {
+        type: String,
+        required: true,
+        trim: true,
+        uppercase: true,
+        maxlength: 12,
       },
 
       telefono: {
         type: String,
-        default: "",
+        required: true,
+        trim: true,
+        maxlength: 20,
       },
 
+      // -----------------------------------------------
+      // FACTURACIÓN
+      // -----------------------------------------------
+
+      facturacion: {
+        type: facturacionSchema,
+        required: true,
+      },
+
+      // -----------------------------------------------
+      // ENVÍO
+      // -----------------------------------------------
+
+      envio: {
+        type: envioSchema,
+        required: true,
+      },
+
+      // -----------------------------------------------
+      // COMPATIBILIDAD CON PEDIDOS ANTIGUOS
+      // -----------------------------------------------
+
+      // Se mantiene para que los pedidos antiguos
+      // no tengan problemas al ser leídos.
       direccion: {
         type: String,
         default: "",
+        trim: true,
       },
     },
 
+    // -----------------------------------------------
+    // PRODUCTOS
+    // -----------------------------------------------
 
-    items: [orderItemSchema],
+    items: {
+      type: [orderItemSchema],
+      required: true,
+      validate: {
+        validator: (items) => Array.isArray(items) && items.length > 0,
+        message: "El pedido debe contener al menos un producto",
+      },
+    },
 
+    // -----------------------------------------------
+    // TOTAL
+    // -----------------------------------------------
 
     total: {
       type: Number,
       required: true,
+      min: 1,
     },
 
+    // -----------------------------------------------
+    // ESTADO
+    // -----------------------------------------------
 
     estado: {
       type: String,
-
       enum: [
         "pendiente",
         "pagado",
         "enviado",
         "cancelado",
       ],
-
       default: "pendiente",
     },
 
+    // -----------------------------------------------
+    // MÉTODO DE PAGO
+    // -----------------------------------------------
 
     metodoPago: {
       type: String,
-      default: "webpay_link",
+      default: "webpay",
+      trim: true,
     },
 
+    // -----------------------------------------------
+    // CÓDIGO DE TRANSACCIÓN
+    // -----------------------------------------------
 
     codigoTransaccion: {
       type: String,
       default: "",
+      trim: true,
     },
   },
 
@@ -91,6 +292,23 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+
+// =====================================================
+// ÍNDICES
+// =====================================================
+
+orderSchema.index({
+  "cliente.email": 1,
+});
+
+orderSchema.index({
+  estado: 1,
+});
+
+orderSchema.index({
+  createdAt: -1,
+});
 
 
 export default mongoose.model(

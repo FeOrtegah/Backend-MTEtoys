@@ -12,12 +12,365 @@ const getPrecioVenta = (producto) => {
     producto.enOferta === true &&
     producto.precioOferta !== null &&
     producto.precioOferta !== undefined &&
-    producto.precioOferta >= 0
+    Number.isFinite(Number(producto.precioOferta)) &&
+    Number(producto.precioOferta) >= 0
   ) {
-    return producto.precioOferta;
+    return Number(producto.precioOferta);
   }
 
-  return producto.precio;
+  return Number(producto.precio);
+};
+
+
+// =====================================================
+// LIMPIAR TEXTO
+// =====================================================
+
+const limpiarTexto = (valor) => {
+  if (typeof valor !== "string") {
+    return "";
+  }
+
+  return valor.trim();
+};
+
+
+// =====================================================
+// VALIDAR EMAIL
+// =====================================================
+
+const validarEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+
+// =====================================================
+// VALIDAR RUT CHILENO
+// =====================================================
+
+const validarRut = (rut) => {
+  if (typeof rut !== "string") {
+    return false;
+  }
+
+  const rutLimpio = rut
+    .replace(/\./g, "")
+    .replace(/-/g, "")
+    .replace(/\s/g, "")
+    .toUpperCase();
+
+  if (!/^\d{7,8}[0-9K]$/.test(rutLimpio)) {
+    return false;
+  }
+
+  const cuerpo = rutLimpio.slice(0, -1);
+  const digitoVerificador = rutLimpio.slice(-1);
+
+  let suma = 0;
+  let multiplicador = 2;
+
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * multiplicador;
+
+    multiplicador++;
+
+    if (multiplicador > 7) {
+      multiplicador = 2;
+    }
+  }
+
+  const resto = suma % 11;
+  const resultado = 11 - resto;
+
+  let dvEsperado;
+
+  if (resultado === 11) {
+    dvEsperado = "0";
+  } else if (resultado === 10) {
+    dvEsperado = "K";
+  } else {
+    dvEsperado = String(resultado);
+  }
+
+  return dvEsperado === digitoVerificador;
+};
+
+
+// =====================================================
+// NORMALIZAR RUT
+// =====================================================
+
+const normalizarRut = (rut) => {
+  return limpiarTexto(rut)
+    .replace(/\./g, "")
+    .replace(/\s/g, "")
+    .toUpperCase();
+};
+
+
+// =====================================================
+// VALIDAR TELÉFONO CHILENO
+// =====================================================
+
+const validarTelefono = (telefono) => {
+  if (typeof telefono !== "string") {
+    return false;
+  }
+
+  const limpio = telefono.replace(/[\s()-]/g, "");
+
+  // Formatos aceptados:
+  //
+  // +56912345678
+  // 56912345678
+  // 912345678
+  //
+  return /^(?:\+?56)?9\d{8}$/.test(limpio);
+};
+
+
+// =====================================================
+// NORMALIZAR TELÉFONO
+// =====================================================
+
+const normalizarTelefono = (telefono) => {
+  const limpio = limpiarTexto(telefono)
+    .replace(/[\s()-]/g, "");
+
+  if (limpio.startsWith("+56")) {
+    return limpio;
+  }
+
+  if (limpio.startsWith("56")) {
+    return `+${limpio}`;
+  }
+
+  if (/^9\d{8}$/.test(limpio)) {
+    return `+56${limpio}`;
+  }
+
+  return limpio;
+};
+
+
+// =====================================================
+// VALIDAR TEXTO OBLIGATORIO
+// =====================================================
+
+const validarTexto = (
+  valor,
+  nombreCampo,
+  minimo = 2,
+  maximo = 150
+) => {
+  if (typeof valor !== "string") {
+    return `${nombreCampo} debe ser texto`;
+  }
+
+  const limpio = valor.trim();
+
+  if (!limpio) {
+    return `${nombreCampo} es obligatorio`;
+  }
+
+  if (limpio.length < minimo) {
+    return `${nombreCampo} es demasiado corto`;
+  }
+
+  if (limpio.length > maximo) {
+    return `${nombreCampo} es demasiado largo`;
+  }
+
+  return null;
+};
+
+
+// =====================================================
+// VALIDAR DATOS DE FACTURACIÓN
+// =====================================================
+
+const validarFacturacion = (facturacion) => {
+  if (!facturacion || typeof facturacion !== "object") {
+    return "Faltan los datos de facturación";
+  }
+
+  const errorNombre = validarTexto(
+    facturacion.nombre,
+    "El nombre de facturación",
+    2,
+    100
+  );
+
+  if (errorNombre) {
+    return errorNombre;
+  }
+
+
+  const rut = normalizarRut(facturacion.rut);
+
+  if (!rut) {
+    return "El RUT de facturación es obligatorio";
+  }
+
+  if (!validarRut(rut)) {
+    return "El RUT de facturación no es válido";
+  }
+
+
+  const errorDireccion = validarTexto(
+    facturacion.direccion,
+    "La dirección de facturación",
+    3,
+    150
+  );
+
+  if (errorDireccion) {
+    return errorDireccion;
+  }
+
+
+  const errorNumero = validarTexto(
+    String(facturacion.numero ?? ""),
+    "El número de la dirección de facturación",
+    1,
+    10
+  );
+
+  if (errorNumero) {
+    return errorNumero;
+  }
+
+
+  const errorRegion = validarTexto(
+    facturacion.region,
+    "La región de facturación",
+    2,
+    100
+  );
+
+  if (errorRegion) {
+    return errorRegion;
+  }
+
+
+  const errorComuna = validarTexto(
+    facturacion.comuna,
+    "La comuna de facturación",
+    2,
+    100
+  );
+
+  if (errorComuna) {
+    return errorComuna;
+  }
+
+
+  if (
+    facturacion.departamento !== undefined &&
+    typeof facturacion.departamento !== "string"
+  ) {
+    return "El departamento de facturación no es válido";
+  }
+
+
+  return null;
+};
+
+
+// =====================================================
+// VALIDAR DATOS DE ENVÍO
+// =====================================================
+
+const validarEnvio = (envio) => {
+  if (!envio || typeof envio !== "object") {
+    return "Faltan los datos de envío";
+  }
+
+
+  const errorNombre = validarTexto(
+    envio.nombreReceptor,
+    "El nombre del receptor",
+    2,
+    100
+  );
+
+  if (errorNombre) {
+    return errorNombre;
+  }
+
+
+  const telefono = normalizarTelefono(envio.telefono);
+
+  if (!validarTelefono(telefono)) {
+    return "El teléfono de envío no es válido";
+  }
+
+
+  const errorDireccion = validarTexto(
+    envio.direccion,
+    "La dirección de envío",
+    3,
+    150
+  );
+
+  if (errorDireccion) {
+    return errorDireccion;
+  }
+
+
+  const errorNumero = validarTexto(
+    String(envio.numero ?? ""),
+    "El número de la dirección de envío",
+    1,
+    10
+  );
+
+  if (errorNumero) {
+    return errorNumero;
+  }
+
+
+  const errorRegion = validarTexto(
+    envio.region,
+    "La región de envío",
+    2,
+    100
+  );
+
+  if (errorRegion) {
+    return errorRegion;
+  }
+
+
+  const errorComuna = validarTexto(
+    envio.comuna,
+    "La comuna de envío",
+    2,
+    100
+  );
+
+  if (errorComuna) {
+    return errorComuna;
+  }
+
+
+  if (
+    envio.departamento !== undefined &&
+    typeof envio.departamento !== "string"
+  ) {
+    return "El departamento de envío no es válido";
+  }
+
+
+  if (
+    envio.indicaciones !== undefined &&
+    typeof envio.indicaciones !== "string"
+  ) {
+    return "Las indicaciones de envío no son válidas";
+  }
+
+
+  return null;
 };
 
 
@@ -26,114 +379,293 @@ const getPrecioVenta = (producto) => {
 // =====================================================
 // Público.
 // Permite comprar con o sin cuenta.
+//
+// IMPORTANTE:
+// El frontend NO controla:
+// - precio
+// - stock
+// - total
+//
+// Todo se vuelve a comprobar aquí.
 
 export const createOrder = async (req, res) => {
   try {
     const { cliente, items } = req.body;
 
 
-    // -------------------------------------------------
+    // =================================================
     // VALIDAR CLIENTE
-    // -------------------------------------------------
+    // =================================================
 
-    if (!cliente) {
+    if (
+      !cliente ||
+      typeof cliente !== "object"
+    ) {
       return res.status(400).json({
         message: "Faltan los datos del cliente",
       });
     }
 
 
-    if (
-      !cliente.nombre ||
-      !cliente.email ||
-      !cliente.telefono ||
-      !cliente.direccion
-    ) {
+    // =================================================
+    // DATOS PRINCIPALES
+    // =================================================
+
+    const nombre = limpiarTexto(
+      cliente.nombre
+    );
+
+    const email = limpiarTexto(
+      cliente.email
+    ).toLowerCase();
+
+    const rut = normalizarRut(
+      cliente.rut
+    );
+
+    const telefono = normalizarTelefono(
+      cliente.telefono
+    );
+
+
+    // -------------------------------------------------
+    // NOMBRE
+    // -------------------------------------------------
+
+    const errorNombre = validarTexto(
+      nombre,
+      "El nombre",
+      2,
+      100
+    );
+
+    if (errorNombre) {
       return res.status(400).json({
-        message: "Faltan datos obligatorios del cliente",
+        message: errorNombre,
       });
     }
 
 
     // -------------------------------------------------
-    // LIMPIAR DATOS
+    // EMAIL
     // -------------------------------------------------
 
-    const nombre = cliente.nombre.trim();
-    const email = cliente.email.trim().toLowerCase();
-    const telefono = cliente.telefono.trim();
-    const direccion = cliente.direccion.trim();
-
-
-    if (!nombre || !email || !telefono || !direccion) {
+    if (!email || !validarEmail(email)) {
       return res.status(400).json({
-        message: "Los datos del cliente no pueden estar vacíos",
+        message:
+          "El correo electrónico no es válido",
+      });
+    }
+
+
+    if (email.length > 150) {
+      return res.status(400).json({
+        message:
+          "El correo electrónico es demasiado largo",
       });
     }
 
 
     // -------------------------------------------------
-    // VALIDAR EMAIL
+    // RUT
     // -------------------------------------------------
 
-    const emailValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailValido.test(email)) {
+    if (!rut || !validarRut(rut)) {
       return res.status(400).json({
-        message: "El correo electrónico no es válido",
+        message: "El RUT no es válido",
       });
     }
 
 
     // -------------------------------------------------
-    // VALIDAR ITEMS
+    // TELÉFONO
     // -------------------------------------------------
+
+    if (!validarTelefono(telefono)) {
+      return res.status(400).json({
+        message:
+          "El número de teléfono no es válido",
+      });
+    }
+
+
+    // =================================================
+    // FACTURACIÓN
+    // =================================================
+
+    const errorFacturacion =
+      validarFacturacion(
+        cliente.facturacion
+      );
+
+    if (errorFacturacion) {
+      return res.status(400).json({
+        message: errorFacturacion,
+      });
+    }
+
+
+    // =================================================
+    // ENVÍO
+    // =================================================
+
+    const errorEnvio =
+      validarEnvio(
+        cliente.envio
+      );
+
+    if (errorEnvio) {
+      return res.status(400).json({
+        message: errorEnvio,
+      });
+    }
+
+
+    // =================================================
+    // LIMPIAR FACTURACIÓN
+    // =================================================
+
+    const facturacion = {
+      nombre:
+        limpiarTexto(
+          cliente.facturacion.nombre
+        ),
+
+      rut:
+        normalizarRut(
+          cliente.facturacion.rut
+        ),
+
+      direccion:
+        limpiarTexto(
+          cliente.facturacion.direccion
+        ),
+
+      numero:
+        limpiarTexto(
+          String(
+            cliente.facturacion.numero
+          )
+        ),
+
+      departamento:
+        limpiarTexto(
+          cliente.facturacion.departamento || ""
+        ),
+
+      region:
+        limpiarTexto(
+          cliente.facturacion.region
+        ),
+
+      comuna:
+        limpiarTexto(
+          cliente.facturacion.comuna
+        ),
+    };
+
+
+    // =================================================
+    // LIMPIAR ENVÍO
+    // =================================================
+
+    const envio = {
+      nombreReceptor:
+        limpiarTexto(
+          cliente.envio.nombreReceptor
+        ),
+
+      telefono:
+        normalizarTelefono(
+          cliente.envio.telefono
+        ),
+
+      direccion:
+        limpiarTexto(
+          cliente.envio.direccion
+        ),
+
+      numero:
+        limpiarTexto(
+          String(
+            cliente.envio.numero
+          )
+        ),
+
+      departamento:
+        limpiarTexto(
+          cliente.envio.departamento || ""
+        ),
+
+      region:
+        limpiarTexto(
+          cliente.envio.region
+        ),
+
+      comuna:
+        limpiarTexto(
+          cliente.envio.comuna
+        ),
+
+      indicaciones:
+        limpiarTexto(
+          cliente.envio.indicaciones || ""
+        ),
+    };
+
+
+    // =================================================
+    // ITEMS
+    // =================================================
 
     if (
       !Array.isArray(items) ||
       items.length === 0
     ) {
       return res.status(400).json({
-        message: "El pedido debe contener al menos un producto",
+        message:
+          "El pedido debe contener al menos un producto",
       });
     }
 
 
-    // -------------------------------------------------
-    // CONSTRUIR ITEMS DEL PEDIDO
-    // -------------------------------------------------
+    // Evita pedidos gigantes enviados
+    // artificialmente al backend.
+
+    if (items.length > 100) {
+      return res.status(400).json({
+        message:
+          "El pedido contiene demasiados productos",
+      });
+    }
+
+
+    // =================================================
+    // CONSTRUIR ITEMS
+    // =================================================
 
     const itemsPedido = [];
+
     let total = 0;
 
 
     for (const item of items) {
 
-      if (!item.producto) {
-        return res.status(400).json({
-          message: "Falta el ID de un producto",
-        });
-      }
+      // ------------------------------------------------
+      // PRODUCTO
+      // ------------------------------------------------
 
-
-      const cantidad = Number(item.cantidad);
-
-
-      if (
-        !Number.isInteger(cantidad) ||
-        cantidad <= 0
-      ) {
+      if (!item || !item.producto) {
         return res.status(400).json({
           message:
-            "La cantidad de los productos debe ser un número entero mayor a 0",
+            "Falta el ID de un producto",
         });
       }
 
 
-      // -------------------------------------------------
-      // VALIDAR ID DEL PRODUCTO
-      // -------------------------------------------------
+      // ------------------------------------------------
+      // ID
+      // ------------------------------------------------
 
       if (
         !mongoose.Types.ObjectId.isValid(
@@ -147,12 +679,34 @@ export const createOrder = async (req, res) => {
       }
 
 
-      // -------------------------------------------------
+      // ------------------------------------------------
+      // CANTIDAD
+      // ------------------------------------------------
+
+      const cantidad =
+        Number(item.cantidad);
+
+
+      if (
+        !Number.isInteger(cantidad) ||
+        cantidad <= 0 ||
+        cantidad > 10000
+      ) {
+        return res.status(400).json({
+          message:
+            "La cantidad de los productos no es válida",
+        });
+      }
+
+
+      // ------------------------------------------------
       // BUSCAR PRODUCTO
-      // -------------------------------------------------
+      // ------------------------------------------------
 
       const producto =
-        await Product.findById(item.producto);
+        await Product.findById(
+          item.producto
+        );
 
 
       if (!producto) {
@@ -163,9 +717,9 @@ export const createOrder = async (req, res) => {
       }
 
 
-      // -------------------------------------------------
+      // ------------------------------------------------
       // PRODUCTO ACTIVO
-      // -------------------------------------------------
+      // ------------------------------------------------
 
       if (!producto.activo) {
         return res.status(400).json({
@@ -175,11 +729,16 @@ export const createOrder = async (req, res) => {
       }
 
 
-      // -------------------------------------------------
+      // ------------------------------------------------
       // STOCK
-      // -------------------------------------------------
+      // ------------------------------------------------
 
-      if (producto.stock < cantidad) {
+      if (
+        !Number.isInteger(
+          Number(producto.stock)
+        ) ||
+        producto.stock < cantidad
+      ) {
         return res.status(400).json({
           message:
             `Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}`,
@@ -187,69 +746,124 @@ export const createOrder = async (req, res) => {
       }
 
 
-      // -------------------------------------------------
+      // ------------------------------------------------
       // PRECIO REAL
-      // -------------------------------------------------
+      // ------------------------------------------------
 
       const precioUnitario =
         getPrecioVenta(producto);
 
 
+      if (
+        !Number.isFinite(
+          precioUnitario
+        ) ||
+        precioUnitario < 0
+      ) {
+        return res.status(400).json({
+          message:
+            `El precio del producto "${producto.nombre}" no es válido`,
+        });
+      }
+
+
+      // ------------------------------------------------
+      // SUBTOTAL
+      // ------------------------------------------------
+
       const subtotal =
-        precioUnitario * cantidad;
+        precioUnitario *
+        cantidad;
+
+
+      if (
+        !Number.isFinite(subtotal) ||
+        subtotal < 0
+      ) {
+        return res.status(400).json({
+          message:
+            "No se pudo calcular el subtotal del pedido",
+        });
+      }
 
 
       total += subtotal;
 
 
-      // -------------------------------------------------
+      // ------------------------------------------------
       // GUARDAR ITEM
-      // -------------------------------------------------
+      // ------------------------------------------------
 
       itemsPedido.push({
-        producto: producto._id,
-        nombre: producto.nombre,
+        producto:
+          producto._id,
+
+        nombre:
+          producto.nombre,
+
         cantidad,
+
         precioUnitario,
       });
     }
 
 
-    // -------------------------------------------------
-    // VALIDAR TOTAL
-    // -------------------------------------------------
+    // =================================================
+    // TOTAL
+    // =================================================
 
     if (
       !Number.isFinite(total) ||
       total <= 0
     ) {
       return res.status(400).json({
-        message: "El total del pedido no es válido",
+        message:
+          "El total del pedido no es válido",
       });
     }
 
 
-    // -------------------------------------------------
+    // =================================================
     // CREAR PEDIDO
-    // -------------------------------------------------
+    // =================================================
 
-    const pedido = new Order({
-      cliente: {
-        nombre,
-        email,
-        telefono,
-        direccion,
-      },
+    const pedido =
+      new Order({
+        cliente: {
+          nombre,
+          email,
+          rut,
+          telefono,
 
-      items: itemsPedido,
+          facturacion,
 
-      total: Math.round(total),
+          envio,
 
-      estado: "pendiente",
+          // Compatibilidad:
+          // guardamos también una dirección
+          // legible de envío.
 
-      metodoPago: "webpay",
-    });
+          direccion:
+            `${envio.direccion} ${envio.numero}`.trim(),
+        },
 
+        items:
+          itemsPedido,
+
+        total:
+          Math.round(total),
+
+        estado:
+          "pendiente",
+
+        metodoPago:
+          "webpay",
+      });
+
+
+    // =================================================
+    // GUARDAR
+    // =================================================
 
     const nuevoPedido =
       await pedido.save();
@@ -268,7 +882,8 @@ export const createOrder = async (req, res) => {
     );
 
     return res.status(500).json({
-      message: "Error al crear el pedido",
+      message:
+        "Error al crear el pedido",
     });
   }
 };
@@ -290,7 +905,9 @@ export const getOrders = async (req, res) => {
         });
 
 
-    return res.json(pedidos);
+    return res.json(
+      pedidos
+    );
 
 
   } catch (error) {
@@ -301,7 +918,8 @@ export const getOrders = async (req, res) => {
     );
 
     return res.status(500).json({
-      message: "Error al obtener los pedidos",
+      message:
+        "Error al obtener los pedidos",
     });
   }
 };
@@ -317,7 +935,8 @@ export const getMyOrders = async (req, res) => {
 
     if (!req.usuario) {
       return res.status(401).json({
-        message: "Usuario no autenticado",
+        message:
+          "Usuario no autenticado",
       });
     }
 
@@ -339,14 +958,17 @@ export const getMyOrders = async (req, res) => {
     const pedidos =
       await Order
         .find({
-          "cliente.email": emailUsuario,
+          "cliente.email":
+            emailUsuario,
         })
         .sort({
           createdAt: -1,
         });
 
 
-    return res.json(pedidos);
+    return res.json(
+      pedidos
+    );
 
 
   } catch (error) {
@@ -357,7 +979,8 @@ export const getMyOrders = async (req, res) => {
     );
 
     return res.status(500).json({
-      message: "Error al obtener tus pedidos",
+      message:
+        "Error al obtener tus pedidos",
     });
   }
 };
@@ -366,19 +989,12 @@ export const getMyOrders = async (req, res) => {
 // =====================================================
 // OBTENER PEDIDO POR ID
 // =====================================================
-// Admin:
-//   Puede ver cualquier pedido.
-//
-// Usuario:
-//   Solo puede ver pedidos de su propio email.
-//
-// Invitado:
-//   No puede acceder a esta ruta porque requiere JWT.
 
 export const getOrderById = async (req, res) => {
   try {
 
-    const { id } = req.params;
+    const { id } =
+      req.params;
 
 
     // -------------------------------------------------
@@ -389,13 +1005,14 @@ export const getOrderById = async (req, res) => {
       !mongoose.Types.ObjectId.isValid(id)
     ) {
       return res.status(400).json({
-        message: "ID de pedido inválido",
+        message:
+          "ID de pedido inválido",
       });
     }
 
 
     // -------------------------------------------------
-    // BUSCAR PEDIDO
+    // BUSCAR
     // -------------------------------------------------
 
     const pedido =
@@ -404,18 +1021,20 @@ export const getOrderById = async (req, res) => {
 
     if (!pedido) {
       return res.status(404).json({
-        message: "Pedido no encontrado",
+        message:
+          "Pedido no encontrado",
       });
     }
 
 
     // -------------------------------------------------
-    // VERIFICAR USUARIO
+    // USUARIO
     // -------------------------------------------------
 
     if (!req.usuario) {
       return res.status(401).json({
-        message: "Usuario no autenticado",
+        message:
+          "Usuario no autenticado",
       });
     }
 
@@ -427,7 +1046,9 @@ export const getOrderById = async (req, res) => {
     if (
       req.usuario.rol === "admin"
     ) {
-      return res.json(pedido);
+      return res.json(
+        pedido
+      );
     }
 
 
@@ -465,7 +1086,9 @@ export const getOrderById = async (req, res) => {
     }
 
 
-    return res.json(pedido);
+    return res.json(
+      pedido
+    );
 
 
   } catch (error) {
@@ -476,7 +1099,8 @@ export const getOrderById = async (req, res) => {
     );
 
     return res.status(500).json({
-      message: "Error al obtener el pedido",
+      message:
+        "Error al obtener el pedido",
     });
   }
 };
@@ -490,8 +1114,9 @@ export const getOrderById = async (req, res) => {
 export const confirmPayment = async (req, res) => {
   try {
 
-    const { codigoTransaccion } =
-      req.body;
+    const {
+      codigoTransaccion,
+    } = req.body;
 
 
     const pedido =
@@ -502,10 +1127,15 @@ export const confirmPayment = async (req, res) => {
 
     if (!pedido) {
       return res.status(404).json({
-        message: "Pedido no encontrado",
+        message:
+          "Pedido no encontrado",
       });
     }
 
+
+    // -------------------------------------------------
+    // YA PAGADO
+    // -------------------------------------------------
 
     if (
       pedido.estado === "pagado"
@@ -513,6 +1143,20 @@ export const confirmPayment = async (req, res) => {
       return res.status(400).json({
         message:
           "Este pedido ya fue pagado",
+      });
+    }
+
+
+    // -------------------------------------------------
+    // CANCELADO
+    // -------------------------------------------------
+
+    if (
+      pedido.estado === "cancelado"
+    ) {
+      return res.status(400).json({
+        message:
+          "No se puede pagar un pedido cancelado",
       });
     }
 
@@ -548,6 +1192,23 @@ export const confirmPayment = async (req, res) => {
             `Stock insuficiente para ${producto.nombre}`,
         });
       }
+    }
+
+
+    // -------------------------------------------------
+    // SEGUNDA PASADA
+    // -------------------------------------------------
+    // Recién después de comprobar TODO
+    // modificamos el stock.
+
+    for (
+      const item of pedido.items
+    ) {
+
+      const producto =
+        await Product.findById(
+          item.producto
+        );
 
 
       producto.stock -=
@@ -559,7 +1220,7 @@ export const confirmPayment = async (req, res) => {
 
 
     // -------------------------------------------------
-    // MARCAR COMO PAGADO
+    // MARCAR PAGADO
     // -------------------------------------------------
 
     pedido.estado =
@@ -567,13 +1228,17 @@ export const confirmPayment = async (req, res) => {
 
 
     pedido.codigoTransaccion =
-      codigoTransaccion || "";
+      limpiarTexto(
+        codigoTransaccion || ""
+      );
 
 
     await pedido.save();
 
 
-    return res.json(pedido);
+    return res.json(
+      pedido
+    );
 
 
   } catch (error) {
@@ -607,7 +1272,8 @@ export const cancelOrder = async (req, res) => {
 
     if (!pedido) {
       return res.status(404).json({
-        message: "Pedido no encontrado",
+        message:
+          "Pedido no encontrado",
       });
     }
 
@@ -639,7 +1305,9 @@ export const cancelOrder = async (req, res) => {
     await pedido.save();
 
 
-    return res.json(pedido);
+    return res.json(
+      pedido
+    );
 
 
   } catch (error) {
