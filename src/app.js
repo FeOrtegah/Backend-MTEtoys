@@ -6,6 +6,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import comboRoutes from "./routes/comboRoutes.js";
+import webpayRoutes from "./routes/webpayRoutes.js";
 
 dotenv.config();
 
@@ -27,6 +28,8 @@ app.use(
 );
 
 app.use(express.json());
+// Webpay redirige de vuelta con un POST application/x-www-form-urlencoded
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   res.json({
@@ -39,5 +42,6 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/combos", comboRoutes);
+app.use("/api/webpay", webpayRoutes);
 
 export default app;
