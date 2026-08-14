@@ -11,16 +11,14 @@ import { protegerRuta, soloAdmin } from "../middleware/auth.js";
 
 const router = Router();
 
-// Publica: el cliente crea su pedido al comprar 
+// 1. Rutas específicas primero
 router.post("/", createOrder);
-
-// Cliente con sesion : sus propios pedidos
 router.get("/mine", protegerRuta, getMyOrders);
-
-// Admin
 router.get("/", protegerRuta, soloAdmin, getOrders);
+
+// 2. Rutas dinámicas con :id al final para evitar conflictos
 router.get("/:id", protegerRuta, getOrderById);
 router.patch("/:id/confirm-payment", protegerRuta, soloAdmin, confirmPayment);
-router.patch("/:id/cancel", protegerRuta, cancelOrder);
+router.patch("/:id/cancel", protegerRuta, soloAdmin, cancelOrder); // Asegúrate de incluir protegerRuta y soloAdmin
 
 export default router;
