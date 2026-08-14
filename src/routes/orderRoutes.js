@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import {
   createOrder,
   getOrders,
@@ -7,18 +8,86 @@ import {
   confirmPayment,
   cancelOrder,
 } from "../controllers/orderController.js";
-import { protegerRuta, soloAdmin } from "../middleware/auth.js";
+
+import {
+  protegerRuta,
+  soloAdmin,
+} from "../middleware/auth.js";
 
 const router = Router();
 
-// 1. Rutas específicas primero
-router.post("/", createOrder);
-router.get("/mine", protegerRuta, getMyOrders);
-router.get("/", protegerRuta, soloAdmin, getOrders);
 
-// 2. Rutas dinámicas con :id al final para evitar conflictos
-router.get("/:id", protegerRuta, getOrderById);
-router.patch("/:id/confirm-payment", protegerRuta, soloAdmin, confirmPayment);
-router.patch("/:id/cancel", protegerRuta, soloAdmin, cancelOrder); // Asegúrate de incluir protegerRuta y soloAdmin
+// =====================================================
+// CREAR PEDIDO
+// =====================================================
+// Público para permitir compras como invitado.
+
+router.post("/", createOrder);
+
+
+// =====================================================
+// PEDIDOS DEL USUARIO AUTENTICADO
+// =====================================================
+
+router.get(
+  "/mine",
+  protegerRuta,
+  getMyOrders
+);
+
+
+// =====================================================
+// TODOS LOS PEDIDOS
+// SOLO ADMIN
+// =====================================================
+
+router.get(
+  "/",
+  protegerRuta,
+  soloAdmin,
+  getOrders
+);
+
+
+// =====================================================
+// PEDIDO INDIVIDUAL
+// =====================================================
+// Usuario:
+//   Solo puede ver sus propios pedidos.
+//
+// Admin:
+//   Puede ver cualquier pedido.
+
+router.get(
+  "/:id",
+  protegerRuta,
+  getOrderById
+);
+
+
+// =====================================================
+// CONFIRMAR PAGO MANUAL
+// SOLO ADMIN
+// =====================================================
+
+router.patch(
+  "/:id/confirm-payment",
+  protegerRuta,
+  soloAdmin,
+  confirmPayment
+);
+
+
+// =====================================================
+// CANCELAR PEDIDO
+// SOLO ADMIN
+// =====================================================
+
+router.patch(
+  "/:id/cancel",
+  protegerRuta,
+  soloAdmin,
+  cancelOrder
+);
 
 export default router;

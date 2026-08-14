@@ -1,14 +1,12 @@
+import mongoose from "mongoose";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
-/**
- * Obtiene el precio real de venta de un producto.
- *
- * Si el producto está en oferta y tiene un precio de oferta válido,
- * se utiliza ese precio.
- *
- * Si no, se utiliza el precio normal.
- */
+
+// =====================================================
+// OBTENER PRECIO REAL DE VENTA
+// =====================================================
+
 const getPrecioVenta = (producto) => {
   if (
     producto.enOferta === true &&
@@ -23,16 +21,20 @@ const getPrecioVenta = (producto) => {
 };
 
 
-/**
- * Crear pedido
- */
+// =====================================================
+// CREAR PEDIDO
+// =====================================================
+// Público.
+// Permite comprar con o sin cuenta.
+
 export const createOrder = async (req, res) => {
   try {
     const { cliente, items } = req.body;
 
-    // -----------------------------
-    // VALIDACIONES BÁSICAS
-    // -----------------------------
+
+    // -------------------------------------------------
+    // VALIDAR CLIENTE
+    // -------------------------------------------------
 
     if (!cliente) {
       return res.status(400).json({
@@ -40,25 +42,71 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    if (!cliente.nombre || !cliente.email || !cliente.telefono || !cliente.direccion) {
+
+    if (
+      !cliente.nombre ||
+      !cliente.email ||
+      !cliente.telefono ||
+      !cliente.direccion
+    ) {
       return res.status(400).json({
         message: "Faltan datos obligatorios del cliente",
       });
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
+
+    // -------------------------------------------------
+    // LIMPIAR DATOS
+    // -------------------------------------------------
+
+    const nombre = cliente.nombre.trim();
+    const email = cliente.email.trim().toLowerCase();
+    const telefono = cliente.telefono.trim();
+    const direccion = cliente.direccion.trim();
+
+
+    if (!nombre || !email || !telefono || !direccion) {
+      return res.status(400).json({
+        message: "Los datos del cliente no pueden estar vacíos",
+      });
+    }
+
+
+    // -------------------------------------------------
+    // VALIDAR EMAIL
+    // -------------------------------------------------
+
+    const emailValido =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailValido.test(email)) {
+      return res.status(400).json({
+        message: "El correo electrónico no es válido",
+      });
+    }
+
+
+    // -------------------------------------------------
+    // VALIDAR ITEMS
+    // -------------------------------------------------
+
+    if (
+      !Array.isArray(items) ||
+      items.length === 0
+    ) {
       return res.status(400).json({
         message: "El pedido debe contener al menos un producto",
       });
     }
 
 
-    // -----------------------------
-    // VALIDAR Y CONSTRUIR ITEMS
-    // -----------------------------
+    // -------------------------------------------------
+    // CONSTRUIR ITEMS DEL PEDIDO
+    // -------------------------------------------------
 
     const itemsPedido = [];
     let total = 0;
+
 
     for (const item of items) {
 
@@ -68,52 +116,96 @@ export const createOrder = async (req, res) => {
         });
       }
 
+
       const cantidad = Number(item.cantidad);
 
-      if (!Number.isInteger(cantidad) || cantidad <= 0) {
+
+      if (
+        !Number.isInteger(cantidad) ||
+        cantidad <= 0
+      ) {
         return res.status(400).json({
-          message: "La cantidad de los productos debe ser un número entero mayor a 0",
+          message:
+            "La cantidad de los productos debe ser un número entero mayor a 0",
         });
       }
 
 
-      // Buscar producto directamente en MongoDB
-      const producto = await Product.findById(item.producto);
+      // -------------------------------------------------
+      // VALIDAR ID DEL PRODUCTO
+      // -------------------------------------------------
+
+      if (
+        !mongoose.Types.ObjectId.isValid(
+          item.producto
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            `ID de producto inválido: ${item.producto}`,
+        });
+      }
+
+
+      // -------------------------------------------------
+      // BUSCAR PRODUCTO
+      // -------------------------------------------------
+
+      const producto =
+        await Product.findById(item.producto);
+
 
       if (!producto) {
         return res.status(404).json({
-          message: `Producto no encontrado: ${item.producto}`,
+          message:
+            `Producto no encontrado: ${item.producto}`,
         });
       }
 
 
-      // Producto desactivado
+      // -------------------------------------------------
+      // PRODUCTO ACTIVO
+      // -------------------------------------------------
+
       if (!producto.activo) {
         return res.status(400).json({
-          message: `El producto "${producto.nombre}" ya no está disponible`,
+          message:
+            `El producto "${producto.nombre}" ya no está disponible`,
         });
       }
 
 
-      // Stock
+      // -------------------------------------------------
+      // STOCK
+      // -------------------------------------------------
+
       if (producto.stock < cantidad) {
         return res.status(400).json({
-          message: `Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}`,
+          message:
+            `Stock insuficiente para ${producto.nombre}. Disponible: ${producto.stock}`,
         });
       }
 
 
-      // Precio REAL determinado por el backend
-      const precioUnitario = getPrecioVenta(producto);
+      // -------------------------------------------------
+      // PRECIO REAL
+      // -------------------------------------------------
 
-      const subtotal = precioUnitario * cantidad;
+      const precioUnitario =
+        getPrecioVenta(producto);
+
+
+      const subtotal =
+        precioUnitario * cantidad;
+
 
       total += subtotal;
 
 
-      // IMPORTANTE:
-      // No usamos nombre ni precio enviados por React.
-      // Usamos los datos actuales de MongoDB.
+      // -------------------------------------------------
+      // GUARDAR ITEM
+      // -------------------------------------------------
+
       itemsPedido.push({
         producto: producto._id,
         nombre: producto.nombre,
@@ -123,16 +215,30 @@ export const createOrder = async (req, res) => {
     }
 
 
-    // -----------------------------
+    // -------------------------------------------------
+    // VALIDAR TOTAL
+    // -------------------------------------------------
+
+    if (
+      !Number.isFinite(total) ||
+      total <= 0
+    ) {
+      return res.status(400).json({
+        message: "El total del pedido no es válido",
+      });
+    }
+
+
+    // -------------------------------------------------
     // CREAR PEDIDO
-    // -----------------------------
+    // -------------------------------------------------
 
     const pedido = new Order({
       cliente: {
-        nombre: cliente.nombre.trim(),
-        email: cliente.email.trim().toLowerCase(),
-        telefono: cliente.telefono.trim(),
-        direccion: cliente.direccion.trim(),
+        nombre,
+        email,
+        telefono,
+        direccion,
       },
 
       items: itemsPedido,
@@ -145,81 +251,156 @@ export const createOrder = async (req, res) => {
     });
 
 
-    const nuevoPedido = await pedido.save();
+    const nuevoPedido =
+      await pedido.save();
 
 
-    return res.status(201).json(nuevoPedido);
+    return res.status(201).json(
+      nuevoPedido
+    );
+
 
   } catch (error) {
 
-    console.error("Error creando pedido:", error);
+    console.error(
+      "Error creando pedido:",
+      error
+    );
 
     return res.status(500).json({
       message: "Error al crear el pedido",
-      error: error.message,
     });
   }
 };
 
 
-/**
- * Obtener todos los pedidos
- * Solo administradores deberían acceder a esta función.
- */
+// =====================================================
+// OBTENER TODOS LOS PEDIDOS
+// SOLO ADMIN
+// =====================================================
+
 export const getOrders = async (req, res) => {
   try {
 
-    const pedidos = await Order
-      .find()
-      .sort({ createdAt: -1 });
+    const pedidos =
+      await Order
+        .find()
+        .sort({
+          createdAt: -1,
+        });
 
-    res.json(pedidos);
+
+    return res.json(pedidos);
+
 
   } catch (error) {
 
-    console.error("Error obteniendo pedidos:", error);
+    console.error(
+      "Error obteniendo pedidos:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error al obtener los pedidos",
     });
   }
 };
 
 
-/**
- * Obtener pedidos del usuario autenticado
- */
+// =====================================================
+// OBTENER MIS PEDIDOS
+// SOLO USUARIOS CON CUENTA
+// =====================================================
+
 export const getMyOrders = async (req, res) => {
   try {
 
-    const pedidos = await Order
-      .find({
-        "cliente.email": req.usuario.email,
-      })
-      .sort({
-        createdAt: -1,
+    if (!req.usuario) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
       });
+    }
 
-    res.json(pedidos);
+
+    if (!req.usuario.email) {
+      return res.status(400).json({
+        message:
+          "El token no contiene un email de usuario",
+      });
+    }
+
+
+    const emailUsuario =
+      req.usuario.email
+        .trim()
+        .toLowerCase();
+
+
+    const pedidos =
+      await Order
+        .find({
+          "cliente.email": emailUsuario,
+        })
+        .sort({
+          createdAt: -1,
+        });
+
+
+    return res.json(pedidos);
+
 
   } catch (error) {
 
-    console.error("Error obteniendo pedidos del usuario:", error);
+    console.error(
+      "Error obteniendo pedidos del usuario:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error al obtener tus pedidos",
     });
   }
 };
 
 
-/**
- * Obtener pedido por ID
- */
+// =====================================================
+// OBTENER PEDIDO POR ID
+// =====================================================
+// Admin:
+//   Puede ver cualquier pedido.
+//
+// Usuario:
+//   Solo puede ver pedidos de su propio email.
+//
+// Invitado:
+//   No puede acceder a esta ruta porque requiere JWT.
+
 export const getOrderById = async (req, res) => {
   try {
 
-    const pedido = await Order.findById(req.params.id);
+    const { id } = req.params;
+
+
+    // -------------------------------------------------
+    // VALIDAR ID
+    // -------------------------------------------------
+
+    if (
+      !mongoose.Types.ObjectId.isValid(id)
+    ) {
+      return res.status(400).json({
+        message: "ID de pedido inválido",
+      });
+    }
+
+
+    // -------------------------------------------------
+    // BUSCAR PEDIDO
+    // -------------------------------------------------
+
+    const pedido =
+      await Order.findById(id);
+
 
     if (!pedido) {
       return res.status(404).json({
@@ -227,32 +408,97 @@ export const getOrderById = async (req, res) => {
       });
     }
 
-    res.json(pedido);
+
+    // -------------------------------------------------
+    // VERIFICAR USUARIO
+    // -------------------------------------------------
+
+    if (!req.usuario) {
+      return res.status(401).json({
+        message: "Usuario no autenticado",
+      });
+    }
+
+
+    // -------------------------------------------------
+    // ADMIN
+    // -------------------------------------------------
+
+    if (
+      req.usuario.rol === "admin"
+    ) {
+      return res.json(pedido);
+    }
+
+
+    // -------------------------------------------------
+    // USUARIO NORMAL
+    // -------------------------------------------------
+
+    if (!req.usuario.email) {
+      return res.status(403).json({
+        message:
+          "No tienes permiso para ver este pedido",
+      });
+    }
+
+
+    const emailUsuario =
+      req.usuario.email
+        .trim()
+        .toLowerCase();
+
+
+    const emailPedido =
+      pedido.cliente.email
+        .trim()
+        .toLowerCase();
+
+
+    if (
+      emailUsuario !== emailPedido
+    ) {
+      return res.status(403).json({
+        message:
+          "No tienes permiso para ver este pedido",
+      });
+    }
+
+
+    return res.json(pedido);
+
 
   } catch (error) {
 
-    console.error("Error obteniendo pedido:", error);
+    console.error(
+      "Error obteniendo pedido:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Error al obtener el pedido",
     });
   }
 };
 
 
-/**
- * Confirmar pago manualmente desde administración.
- *
- * Esta función la dejamos por ahora,
- * pero posteriormente vamos a hacer que Webpay
- * sea quien controle completamente esta parte.
- */
+// =====================================================
+// CONFIRMAR PAGO MANUAL
+// SOLO ADMIN
+// =====================================================
+
 export const confirmPayment = async (req, res) => {
   try {
 
-    const { codigoTransaccion } = req.body;
+    const { codigoTransaccion } =
+      req.body;
 
-    const pedido = await Order.findById(req.params.id);
+
+    const pedido =
+      await Order.findById(
+        req.params.id
+      );
+
 
     if (!pedido) {
       return res.status(404).json({
@@ -261,34 +507,64 @@ export const confirmPayment = async (req, res) => {
     }
 
 
-    if (pedido.estado === "pagado") {
+    if (
+      pedido.estado === "pagado"
+    ) {
       return res.status(400).json({
-        message: "Este pedido ya fue pagado",
+        message:
+          "Este pedido ya fue pagado",
       });
     }
 
 
-    for (const item of pedido.items) {
+    // -------------------------------------------------
+    // DESCONTAR STOCK
+    // -------------------------------------------------
 
-      const producto = await Product.findById(item.producto);
+    for (
+      const item of pedido.items
+    ) {
+
+      const producto =
+        await Product.findById(
+          item.producto
+        );
+
 
       if (!producto) {
-        continue;
-      }
-
-      if (producto.stock < item.cantidad) {
-        return res.status(400).json({
-          message: `Stock insuficiente para ${producto.nombre}`,
+        return res.status(404).json({
+          message:
+            `Producto no encontrado: ${item.nombre}`,
         });
       }
 
-      producto.stock -= item.cantidad;
+
+      if (
+        producto.stock <
+        item.cantidad
+      ) {
+        return res.status(400).json({
+          message:
+            `Stock insuficiente para ${producto.nombre}`,
+        });
+      }
+
+
+      producto.stock -=
+        item.cantidad;
+
 
       await producto.save();
     }
 
 
-    pedido.estado = "pagado";
+    // -------------------------------------------------
+    // MARCAR COMO PAGADO
+    // -------------------------------------------------
+
+    pedido.estado =
+      "pagado";
+
 
     pedido.codigoTransaccion =
       codigoTransaccion || "";
@@ -297,26 +573,37 @@ export const confirmPayment = async (req, res) => {
     await pedido.save();
 
 
-    res.json(pedido);
+    return res.json(pedido);
+
 
   } catch (error) {
 
-    console.error("Error confirmando pago:", error);
+    console.error(
+      "Error confirmando pago:",
+      error
+    );
 
-    res.status(500).json({
-      message: "Error al confirmar el pago",
+    return res.status(500).json({
+      message:
+        "Error al confirmar el pago",
     });
   }
 };
 
 
-/**
- * Cancelar pedido
- */
+// =====================================================
+// CANCELAR PEDIDO
+// SOLO ADMIN
+// =====================================================
+
 export const cancelOrder = async (req, res) => {
   try {
 
-    const pedido = await Order.findById(req.params.id);
+    const pedido =
+      await Order.findById(
+        req.params.id
+      );
+
 
     if (!pedido) {
       return res.status(404).json({
@@ -325,26 +612,46 @@ export const cancelOrder = async (req, res) => {
     }
 
 
-    if (pedido.estado === "pagado") {
+    if (
+      pedido.estado === "pagado"
+    ) {
       return res.status(400).json({
-        message: "No se puede cancelar un pedido ya pagado",
+        message:
+          "No se puede cancelar un pedido ya pagado",
       });
     }
 
 
-    pedido.estado = "cancelado";
+    if (
+      pedido.estado === "cancelado"
+    ) {
+      return res.status(400).json({
+        message:
+          "Este pedido ya está cancelado",
+      });
+    }
+
+
+    pedido.estado =
+      "cancelado";
+
 
     await pedido.save();
 
 
-    res.json(pedido);
+    return res.json(pedido);
+
 
   } catch (error) {
 
-    console.error("Error cancelando pedido:", error);
+    console.error(
+      "Error cancelando pedido:",
+      error
+    );
 
-    res.status(500).json({
-      message: "Error al cancelar el pedido",
+    return res.status(500).json({
+      message:
+        "Error al cancelar el pedido",
     });
   }
 };
