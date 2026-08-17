@@ -160,15 +160,7 @@ export const updateCombo = async (req, res) => {
  */
 export const deleteCombo = async (req, res) => {
   try {
-    const combo = await Combo.findByIdAndUpdate(
-      req.params.id,
-      {
-        activo: false,
-      },
-      {
-        new: true,
-      }
-    );
+    const combo = await Combo.findByIdAndDelete(req.params.id);
 
     if (!combo) {
       return res.status(404).json({
@@ -177,7 +169,7 @@ export const deleteCombo = async (req, res) => {
     }
 
     res.json({
-      message: "Combo desactivado",
+      message: "Combo eliminado correctamente",
     });
   } catch (error) {
     res.status(500).json({
