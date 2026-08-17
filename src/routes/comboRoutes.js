@@ -7,6 +7,7 @@ import {
   updateCombo,
   deleteCombo,
   activateCombo,
+  hardDeleteCombo,
 } from "../controllers/comboController.js";
 
 import {
@@ -16,12 +17,20 @@ import {
 
 const router = Router();
 
+// ========================================
+// TIENDA
+// ========================================
 
-// Tienda
-router.get("/", getCombos);
+router.get(
+  "/",
+  getCombos
+);
 
+// ========================================
+// ADMINISTRACIÓN
+// ========================================
 
-// Administración
+// Obtener todos, activos e inactivos
 router.get(
   "/admin/all",
   protegerRuta,
@@ -29,6 +38,7 @@ router.get(
   getAllCombosAdmin
 );
 
+// Crear
 router.post(
   "/",
   protegerRuta,
@@ -36,6 +46,7 @@ router.post(
   createCombo
 );
 
+// Editar
 router.put(
   "/:id",
   protegerRuta,
@@ -43,6 +54,7 @@ router.put(
   updateCombo
 );
 
+// Desactivar
 router.delete(
   "/:id",
   protegerRuta,
@@ -50,11 +62,20 @@ router.delete(
   deleteCombo
 );
 
+// Activar
 router.patch(
-  "/:id/activate",
+  "/:id/activar",
   protegerRuta,
   soloAdmin,
   activateCombo
+);
+
+// Eliminar permanentemente
+router.delete(
+  "/:id/permanente",
+  protegerRuta,
+  soloAdmin,
+  hardDeleteCombo
 );
 
 export default router;
