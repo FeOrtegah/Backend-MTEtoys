@@ -13,6 +13,7 @@ const app = express();
 const allowedOrigins = [
   "https://mtetoys.cl",
   "https://www.mtetoys.cl",
+  "http://localhost:5173",
 ];
 
 app.use(
