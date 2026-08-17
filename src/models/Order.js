@@ -243,13 +243,38 @@ const orderSchema = new mongoose.Schema(
     },
 
     // -----------------------------------------------
-    // TOTAL
+    // TOTALES
     // -----------------------------------------------
 
+    // Suma de los productos, SIN el envío.
+    totalProductos: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Total final: productos + envío.
+    // Es el monto que se cobra en Webpay.
     total: {
       type: Number,
       required: true,
       min: 1,
+    },
+
+    // -----------------------------------------------
+    // ENVÍO
+    // -----------------------------------------------
+
+    metodoEnvio: {
+      type: String,
+      enum: ["Logística 360", "Bluexpress", "Chilexpress", null],
+      default: null,
+    },
+
+    costoEnvio: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
 
     // -----------------------------------------------
