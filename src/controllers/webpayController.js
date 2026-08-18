@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import { webpayTransaction } from "../config/webpay.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
@@ -9,11 +10,17 @@ import Product from "../models/Product.js";
 
 export const initTransaction = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { orderId, accessToken } = req.body;
 
     if (!orderId) {
       return res.status(400).json({
         message: "Falta orderId",
+      });
+    }
+
+    if (!accessToken || typeof accessToken !== "string") {
+      return res.status(400).json({
+        message: "Falta accessToken",
       });
     }
 
@@ -24,11 +31,27 @@ export const initTransaction = async (req, res) => {
       });
     }
 
-    const pedido = await Order.findById(orderId);
+    // accessToken tiene select:false, hay que pedirlo explícitamente
+    const pedido = await Order.findById(orderId).select("+accessToken");
 
     if (!pedido) {
       return res.status(404).json({
         message: "Pedido no encontrado",
+      });
+    }
+
+    // Comparación en tiempo constante para evitar timing attacks
+    const tokenValido =
+      typeof pedido.accessToken === "string" &&
+      pedido.accessToken.length === accessToken.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(pedido.accessToken),
+        Buffer.from(accessToken)
+      );
+
+    if (!tokenValido) {
+      return res.status(403).json({
+        message: "No autorizado para este pedido",
       });
     }
 

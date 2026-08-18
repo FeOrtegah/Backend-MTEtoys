@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
@@ -318,6 +319,8 @@ export const createOrder = async (req, res) => {
     }
 
     const totalFinal = totalProductos + costoEnvio;
+    const accessToken = crypto.randomBytes(24).toString("hex");
+
     const pedido = new Order({
       cliente: { nombre, email, rut, telefono, facturacion, envio, direccion: `${envio.direccion} ${envio.numero}`.trim() },
       items: itemsPedido,
@@ -327,9 +330,14 @@ export const createOrder = async (req, res) => {
       total: totalFinal,
       estado: "pendiente",
       metodoPago: "webpay",
+      accessToken,
     });
 
     const nuevoPedido = await pedido.save();
+
+    // El documento recién guardado en memoria SÍ incluye accessToken
+    // (select:false solo oculta el campo en consultas posteriores),
+    // así que se entrega una única vez en esta respuesta.
     return res.status(201).json(nuevoPedido);
   } catch (error) {
     console.error("Error creando pedido:", error);

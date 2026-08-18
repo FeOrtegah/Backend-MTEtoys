@@ -311,6 +311,21 @@ const orderSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
+    // -----------------------------------------------
+    // TOKEN DE ACCESO
+    // -----------------------------------------------
+    // Se genera al crear el pedido y se entrega una sola
+    // vez al cliente en la respuesta de creación.
+    // Se exige para iniciar el pago en Webpay, de modo
+    // que no baste con conocer/adivinar el ID del pedido.
+    // select:false => no se filtra en consultas normales
+    // (getOrders, getMyOrders, getOrderById).
+
+    accessToken: {
+      type: String,
+      select: false,
+    },
   },
 
   {
