@@ -16,6 +16,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.1",
     "multer": "^2.2.0",
+    "nodemailer": "^9.0.5",
     "transbank-sdk": "^6.1.1"
   },
   "devDependencies": {

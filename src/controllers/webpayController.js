@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 import { webpayTransaction } from "../config/webpay.js";
+import { enviarCorreoConfirmacionCompra } from "../config/email.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 
@@ -472,6 +473,13 @@ export const confirmTransaction = async (req, res) => {
       console.log(
         `Pedido ${pedido._id} pagado correctamente`
       );
+
+
+      // No se espera (await) intencionalmente: el correo
+      // nunca debe demorar ni romper la respuesta al cliente.
+      // enviarCorreoConfirmacionCompra ya maneja sus propios
+      // errores internamente y no los relanza.
+      enviarCorreoConfirmacionCompra(pedido);
 
 
       return res.redirect(

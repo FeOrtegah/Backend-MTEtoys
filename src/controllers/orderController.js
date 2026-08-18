@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import { enviarCorreoConfirmacionCompra } from "../config/email.js";
 
 // =====================================================
 // ZONAS DE ENVÍO
@@ -410,6 +411,11 @@ export const confirmPayment = async (req, res) => {
     pedido.estado = "pagado";
     pedido.codigoTransaccion = limpiarTexto(codigoTransaccion || "");
     await pedido.save();
+
+    // No se espera (await): no debe demorar la respuesta al admin
+    // ni romper el flujo si el correo falla.
+    enviarCorreoConfirmacionCompra(pedido);
+
     return res.json(pedido);
   } catch (error) {
     console.error("Error confirmando pago:", error);
