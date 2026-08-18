@@ -1,4 +1,27 @@
 import nodemailer from "nodemailer";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// =====================================================
+// LOG DE DEPURACIÓN TEMPORAL
+// =====================================================
+// Escribe en un archivo de texto plano dentro del proyecto,
+// para diagnosticar el envío de correo sin depender de dónde
+// cPanel/Passenger guarde la salida de consola de la app.
+// TODO: quitar esto una vez confirmado que el envío funciona.
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DEBUG_LOG_PATH = path.join(__dirname, "..", "..", "email-debug.log");
+
+function logDebug(mensaje) {
+  try {
+    const linea = `[${new Date().toISOString()}] ${mensaje}\n`;
+    fs.appendFileSync(DEBUG_LOG_PATH, linea);
+  } catch {
+    // Si ni siquiera se puede escribir el log de depuración, lo ignoramos.
+  }
+}
 
 // =====================================================
 // TRANSPORTE SMTP (cPanel)
@@ -134,10 +157,17 @@ function construirHtmlConfirmacion(pedido) {
 // el flujo de pago: el pedido ya quedó pagado en la BD.
 
 export async function enviarCorreoConfirmacionCompra(pedido) {
+  logDebug(
+    `Intentando enviar correo. SMTP_HOST=${process.env.SMTP_HOST} SMTP_PORT=${process.env.SMTP_PORT} SMTP_SECURE=${process.env.SMTP_SECURE} SMTP_USER=${process.env.SMTP_USER} EMAIL_FROM=${process.env.EMAIL_FROM} transporterExiste=${Boolean(transporter)} pedido=${pedido?._id}`
+  );
+
   try {
     if (!transporter) {
       console.warn(
         "SMTP no configurado (faltan SMTP_HOST/SMTP_USER/SMTP_PASS): se omite el correo de confirmación"
+      );
+      logDebug(
+        "OMITIDO: transporter es null (faltan SMTP_HOST/SMTP_USER/SMTP_PASS)"
       );
       return;
     }
@@ -146,6 +176,7 @@ export async function enviarCorreoConfirmacionCompra(pedido) {
       console.warn(
         "Pedido sin email de cliente, se omite el correo de confirmación"
       );
+      logDebug("OMITIDO: el pedido no tiene cliente.email");
       return;
     }
 
@@ -164,11 +195,19 @@ export async function enviarCorreoConfirmacionCompra(pedido) {
     console.log(
       `Correo de confirmación enviado a ${pedido.cliente.email} (pedido ${pedido._id}, messageId: ${info.messageId})`
     );
+    logDebug(
+      `EXITO: correo enviado a ${pedido.cliente.email}, messageId=${info.messageId}`
+    );
   } catch (error) {
     // Nunca se relanza: un correo fallido no debe afectar el pago ya procesado.
     console.error(
       `Error inesperado enviando correo de confirmación (pedido ${pedido?._id}):`,
       error
+    );
+    logDebug(
+      `ERROR: ${error?.code || ""} ${error?.message || error} ${
+        error?.response ? "response=" + error.response : ""
+      }`
     );
   }
 }
