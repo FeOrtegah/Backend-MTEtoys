@@ -7,6 +7,7 @@ import {
   getOrderById,
   confirmPayment,
   cancelOrder,
+  markAsShipped,
 } from "../controllers/orderController.js";
 
 import {
@@ -88,6 +89,19 @@ router.patch(
   protegerRuta,
   soloAdmin,
   cancelOrder
+);
+
+
+// =====================================================
+// MARCAR COMO ENVIADO
+// SOLO ADMIN
+// =====================================================
+
+router.patch(
+  "/:id/marcar-enviado",
+  protegerRuta,
+  soloAdmin,
+  markAsShipped
 );
 
 export default router;

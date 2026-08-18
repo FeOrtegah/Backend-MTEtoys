@@ -436,3 +436,33 @@ export const cancelOrder = async (req, res) => {
     return res.status(500).json({ message: "Error al cancelar el pedido" });
   }
 };
+
+// =====================================================
+// MARCAR PEDIDO COMO ENVIADO
+// =====================================================
+// Marca manual: el admin confirma que despachó el pedido
+// físicamente. Solo aplica a pedidos ya pagados.
+
+export const markAsShipped = async (req, res) => {
+  try {
+    const pedido = await Order.findById(req.params.id);
+
+    if (!pedido) {
+      return res.status(404).json({ message: "Pedido no encontrado" });
+    }
+
+    if (pedido.estado !== "pagado") {
+      return res.status(400).json({
+        message: "Solo se pueden marcar como enviados los pedidos pagados",
+      });
+    }
+
+    pedido.estado = "enviado";
+    await pedido.save();
+
+    return res.json(pedido);
+  } catch (error) {
+    console.error("Error marcando pedido como enviado:", error);
+    return res.status(500).json({ message: "Error al marcar el pedido como enviado" });
+  }
+};
