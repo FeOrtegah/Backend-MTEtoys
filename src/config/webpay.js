@@ -13,7 +13,7 @@ const { WebpayPlus, Options, IntegrationCommerceCodes, IntegrationApiKeys, Envir
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEBUG_LOG_PATH = path.join(__dirname, "..", "..", "webpay-debug.log");
 
-function logDebug(mensaje) {
+export function logDebug(mensaje) {
   try {
     fs.appendFileSync(
       DEBUG_LOG_PATH,
@@ -25,14 +25,21 @@ function logDebug(mensaje) {
 }
 
 function getWebpayOptions() {
-  const isProduction = process.env.WEBPAY_ENV === "production";
+  const webpayEnv = (process.env.WEBPAY_ENV || "").trim();
+  const isProduction = webpayEnv === "production";
+
+  const commerceCode = (
+    process.env.WEBPAY_COMMERCE_CODE || ""
+  ).trim();
+
+  const apiKey = (process.env.WEBPAY_API_KEY || "").trim();
 
   logDebug(
-    `WEBPAY_ENV="${process.env.WEBPAY_ENV}" (tipo: ${typeof process.env.WEBPAY_ENV}) isProduction=${isProduction} WEBPAY_COMMERCE_CODE=${process.env.WEBPAY_COMMERCE_CODE ? "definida (" + process.env.WEBPAY_COMMERCE_CODE.length + " caracteres)" : "NO DEFINIDA"} WEBPAY_API_KEY=${process.env.WEBPAY_API_KEY ? "definida (" + process.env.WEBPAY_API_KEY.length + " caracteres)" : "NO DEFINIDA"}`
+    `WEBPAY_ENV="${process.env.WEBPAY_ENV}" (trimmed="${webpayEnv}") isProduction=${isProduction} WEBPAY_COMMERCE_CODE=${commerceCode ? "definida (" + commerceCode.length + " caracteres)" : "NO DEFINIDA"} WEBPAY_API_KEY=${apiKey ? "definida (" + apiKey.length + " caracteres)" : "NO DEFINIDA"}`
   );
 
   if (isProduction) {
-    if (!process.env.WEBPAY_COMMERCE_CODE || !process.env.WEBPAY_API_KEY) {
+    if (!commerceCode || !apiKey) {
       logDebug(
         "ERROR: WEBPAY_ENV=production pero faltan WEBPAY_COMMERCE_CODE o WEBPAY_API_KEY"
       );
@@ -45,8 +52,8 @@ function getWebpayOptions() {
     logDebug("USANDO: Environment.Production");
 
     return new Options(
-      process.env.WEBPAY_COMMERCE_CODE,
-      process.env.WEBPAY_API_KEY,
+      commerceCode,
+      apiKey,
       Environment.Production
     );
   }

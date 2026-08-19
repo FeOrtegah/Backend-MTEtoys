@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { webpayTransaction } from "../config/webpay.js";
+import { webpayTransaction, logDebug } from "../config/webpay.js";
 import { enviarCorreoConfirmacionCompra } from "../config/email.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
@@ -91,6 +91,13 @@ export const initTransaction = async (req, res) => {
 
   } catch (error) {
     console.error("Error iniciando Webpay:", error);
+
+    logDebug(
+      `ERROR en initTransaction: message="${error?.message}" name="${error?.name}" ` +
+        `response.status=${error?.response?.status} ` +
+        `response.data=${JSON.stringify(error?.response?.data)} ` +
+        `stack=${error?.stack?.split("\n").slice(0, 3).join(" | ")}`
+    );
 
     return res.status(500).json({
       message: "Error al iniciar el pago",
