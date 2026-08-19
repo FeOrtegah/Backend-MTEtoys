@@ -84,6 +84,10 @@ export const initTransaction = async (req, res) => {
       returnUrl
     );
 
+    logDebug(
+      `TOKEN CREADO: token="${response.token}" buyOrder="${buyOrder}" amount=${amount} url="${response.url}"`
+    );
+
     return res.json({
       url: response.url,
       token: response.token,
@@ -131,6 +135,10 @@ export const confirmTransaction = async (req, res) => {
   // ===================================================
 
   if (!token && tokenAbortado) {
+
+    logDebug(
+      `PAGO ANULADO POR EL USUARIO: TBK_TOKEN="${tokenAbortado}" TBK_ORDEN_COMPRA="${ordenCompraAbortada}"`
+    );
 
     try {
 
@@ -192,6 +200,10 @@ export const confirmTransaction = async (req, res) => {
     console.log(
       "Respuesta Webpay:",
       response
+    );
+
+    logDebug(
+      `TOKEN CONFIRMADO: token="${token}" status="${response.status}" response_code=${response.response_code} amount=${response.amount} buy_order="${response.buy_order}" authorization_code="${response.authorization_code}"`
     );
 
 
