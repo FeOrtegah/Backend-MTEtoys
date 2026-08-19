@@ -313,7 +313,7 @@ export const createOrder = async (req, res) => {
     } else {
       if (metodoEnvioRecibido === "Chilexpress") {
         metodoEnvio = "Chilexpress";
-        costoEnvio = COSTO_CHILEXPRESS_REGIONES;
+        costoEnvio = 0;
       } else {
         return res.status(400).json({ message: "Debes seleccionar un método de envío" });
       }
