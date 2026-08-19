@@ -49,7 +49,9 @@ const COMUNAS_AZULES = [
 ];
 
 const COSTO_LOGISTICA_360 = 3490;
-const COSTO_CHILEXPRESS_REGIONES = 4990;
+// Chilexpress ahora es "por pagar" al recibir, no se cobra en checkout.
+// Se deja este valor documentado por si en el futuro se vuelve a cobrar en línea.
+const COSTO_CHILEXPRESS_REGIONES = 4990; // eslint-disable-line no-unused-vars
 
 const obtenerZonaEnvio = (comuna) => {
   if (!comuna) {
@@ -313,6 +315,8 @@ export const createOrder = async (req, res) => {
     } else {
       if (metodoEnvioRecibido === "Chilexpress") {
         metodoEnvio = "Chilexpress";
+        // Chilexpress es "por pagar": el cliente paga el envío
+        // directamente al recibir, no se cobra en el checkout.
         costoEnvio = 0;
       } else {
         return res.status(400).json({ message: "Debes seleccionar un método de envío" });
