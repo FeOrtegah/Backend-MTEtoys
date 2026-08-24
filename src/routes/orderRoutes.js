@@ -1,357 +1,121 @@
-import mongoose from "mongoose";
+import { Router } from "express";
+
+import {
+  createOrder,
+  getOrders,
+  getMyOrders,
+  getOrderById,
+  confirmPayment,
+  cancelOrder,
+  markAsShipped,
+  hardDeleteOrder,
+} from "../controllers/orderController.js";
+
+import {
+  protegerRuta,
+  soloAdmin,
+} from "../middleware/auth.js";
+
+const router = Router();
 
 
 // =====================================================
-// ITEM DEL PEDIDO
+// CREAR PEDIDO
+// =====================================================
+// Público para permitir compras como invitado.
+
+router.post("/", createOrder);
+
+
+// =====================================================
+// PEDIDOS DEL USUARIO AUTENTICADO
 // =====================================================
 
-const orderItemSchema = new mongoose.Schema(
-  {
-    producto: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-
-    nombre: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    cantidad: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-
-    precioUnitario: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-  },
-  { _id: false }
+router.get(
+  "/mine",
+  protegerRuta,
+  getMyOrders
 );
 
 
 // =====================================================
-// DATOS DE FACTURACIÓN
+// TODOS LOS PEDIDOS
+// SOLO ADMIN
 // =====================================================
 
-const facturacionSchema = new mongoose.Schema(
-  {
-    nombre: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-
-    rut: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-      maxlength: 12,
-    },
-
-    direccion: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 150,
-    },
-
-    numero: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 10,
-    },
-
-    departamento: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 20,
-    },
-
-    region: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-
-    comuna: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-  },
-  { _id: false }
+router.get(
+  "/",
+  protegerRuta,
+  soloAdmin,
+  getOrders
 );
 
 
 // =====================================================
-// DATOS DE ENVÍO
+// PEDIDO INDIVIDUAL
 // =====================================================
+// Usuario:
+//   Solo puede ver sus propios pedidos.
+//
+// Admin:
+//   Puede ver cualquier pedido.
 
-const envioSchema = new mongoose.Schema(
-  {
-    nombreReceptor: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-
-    telefono: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 20,
-    },
-
-    direccion: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 150,
-    },
-
-    numero: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 10,
-    },
-
-    departamento: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 20,
-    },
-
-    region: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-
-    comuna: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-
-    indicaciones: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 250,
-    },
-  },
-  { _id: false }
+router.get(
+  "/:id",
+  protegerRuta,
+  getOrderById
 );
 
 
 // =====================================================
-// PEDIDO
+// CONFIRMAR PAGO MANUAL
+// SOLO ADMIN
 // =====================================================
 
-const orderSchema = new mongoose.Schema(
-  {
-    cliente: {
-      nombre: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 100,
-      },
-
-      email: {
-        type: String,
-        required: true,
-        trim: true,
-        lowercase: true,
-        maxlength: 150,
-      },
-
-      rut: {
-        type: String,
-        required: true,
-        trim: true,
-        uppercase: true,
-        maxlength: 12,
-      },
-
-      telefono: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 20,
-      },
-
-      // -----------------------------------------------
-      // FACTURACIÓN
-      // -----------------------------------------------
-
-      facturacion: {
-        type: facturacionSchema,
-        required: true,
-      },
-
-      // -----------------------------------------------
-      // ENVÍO
-      // -----------------------------------------------
-
-      envio: {
-        type: envioSchema,
-        required: true,
-      },
-
-      // -----------------------------------------------
-      // COMPATIBILIDAD CON PEDIDOS ANTIGUOS
-      // -----------------------------------------------
-
-      // Se mantiene para que los pedidos antiguos
-      // no tengan problemas al ser leídos.
-      direccion: {
-        type: String,
-        default: "",
-        trim: true,
-      },
-    },
-
-    // -----------------------------------------------
-    // PRODUCTOS
-    // -----------------------------------------------
-
-    items: {
-      type: [orderItemSchema],
-      required: true,
-      validate: {
-        validator: (items) => Array.isArray(items) && items.length > 0,
-        message: "El pedido debe contener al menos un producto",
-      },
-    },
-
-    // -----------------------------------------------
-    // TOTALES
-    // -----------------------------------------------
-
-    // Suma de los productos, SIN el envío.
-    totalProductos: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    // Total final: productos + envío.
-    // Es el monto que se cobra en Webpay.
-    total: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-
-    // -----------------------------------------------
-    // ENVÍO
-    // -----------------------------------------------
-
-    metodoEnvio: {
-      type: String,
-      enum: ["Logística 360", "Bluexpress", "Starken", "Chilexpress", "Retiro en local", null],
-      default: null,
-    },
-
-    costoEnvio: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    // -----------------------------------------------
-    // ESTADO
-    // -----------------------------------------------
-
-    estado: {
-      type: String,
-      enum: [
-        "pendiente",
-        "pagado",
-        "enviado",
-        "cancelado",
-      ],
-      default: "pendiente",
-    },
-
-    // -----------------------------------------------
-    // MÉTODO DE PAGO
-    // -----------------------------------------------
-
-    metodoPago: {
-      type: String,
-      default: "webpay",
-      trim: true,
-    },
-
-    // -----------------------------------------------
-    // CÓDIGO DE TRANSACCIÓN
-    // -----------------------------------------------
-
-    codigoTransaccion: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    // -----------------------------------------------
-    // TOKEN DE ACCESO
-    // -----------------------------------------------
-    // Se genera al crear el pedido y se entrega una sola
-    // vez al cliente en la respuesta de creación.
-    // Se exige para iniciar el pago en Webpay, de modo
-    // que no baste con conocer/adivinar el ID del pedido.
-    // select:false => no se filtra en consultas normales
-    // (getOrders, getMyOrders, getOrderById).
-
-    accessToken: {
-      type: String,
-      select: false,
-    },
-  },
-
-  {
-    timestamps: true,
-  }
+router.patch(
+  "/:id/confirm-payment",
+  protegerRuta,
+  soloAdmin,
+  confirmPayment
 );
 
 
 // =====================================================
-// ÍNDICES
+// CANCELAR PEDIDO
+// SOLO ADMIN
 // =====================================================
 
-orderSchema.index({
-  "cliente.email": 1,
-});
-
-orderSchema.index({
-  estado: 1,
-});
-
-orderSchema.index({
-  createdAt: -1,
-});
-
-
-export default mongoose.model(
-  "Order",
-  orderSchema
+router.patch(
+  "/:id/cancel",
+  protegerRuta,
+  soloAdmin,
+  cancelOrder
 );
+
+
+// =====================================================
+// MARCAR COMO ENVIADO
+// SOLO ADMIN
+// =====================================================
+
+router.patch(
+  "/:id/marcar-enviado",
+  protegerRuta,
+  soloAdmin,
+  markAsShipped
+);
+
+
+// =====================================================
+// ELIMINAR PEDIDO PERMANENTEMENTE
+// SOLO ADMIN
+// =====================================================
+
+router.delete(
+  "/:id",
+  protegerRuta,
+  soloAdmin,
+  hardDeleteOrder
+);
+
+export default router;
