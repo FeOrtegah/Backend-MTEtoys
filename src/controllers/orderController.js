@@ -302,9 +302,9 @@ export const createOrder = async (req, res) => {
     // Métodos válidos según la zona de la comuna (debe reflejar
     // exactamente lo que el frontend ofrece en Checkout.jsx)
     const METODOS_POR_ZONA = {
-      verde: ["Logística 360", "Bluexpress", "Starken", "Retiro en local"],
-      azul: ["Bluexpress", "Starken", "Retiro en local"],
-      fuera: ["Bluexpress", "Starken", "Chilexpress", "Retiro en local"],
+      verde: ["Logística 360", "Bluexpress", "Starken", "Retiro en sede"],
+      azul: ["Bluexpress", "Starken", "Retiro en sede"],
+      fuera: ["Bluexpress", "Starken", "Chilexpress"],
     };
 
     const metodosValidos = envioGratisPorMonto
@@ -322,7 +322,7 @@ export const createOrder = async (req, res) => {
     if (metodoEnvio === "Logística 360" && !envioGratisPorMonto) {
       costoEnvio = COSTO_LOGISTICA_360;
     }
-    // Bluexpress, Starken, Chilexpress y Retiro en local son $0
+    // Bluexpress, Starken, Chilexpress y Retiro en sede son $0
     // en el checkout (por pagar al recibir, o gratis si es retiro).
 
     const totalFinal = totalProductos + costoEnvio;

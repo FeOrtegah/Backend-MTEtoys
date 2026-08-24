@@ -267,7 +267,7 @@ const orderSchema = new mongoose.Schema(
 
     metodoEnvio: {
       type: String,
-      enum: ["Logística 360", "Bluexpress", "Chilexpress", null],
+      enum: ["Logística 360", "Bluexpress", "Starken", "Chilexpress", "Retiro en sede", null],
       default: null,
     },
 

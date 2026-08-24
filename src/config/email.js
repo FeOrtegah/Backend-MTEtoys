@@ -34,6 +34,12 @@ const EMAIL_FROM =
   process.env.EMAIL_FROM || process.env.SMTP_USER;
 
 // =====================================================
+// DIRECCIÓN DE LA SEDE (retiro en persona)
+// =====================================================
+
+const DIRECCION_SEDE = "Heraldo Latorre 974, Pudahuel";
+
+// =====================================================
 // FORMATO DE PESOS CHILENOS
 // =====================================================
 
@@ -119,6 +125,19 @@ function construirHtmlConfirmacion(pedido) {
         ${envio.telefono || pedido.cliente.telefono || ""}
       </p>
     </div>
+
+    ${
+      pedido.metodoEnvio === "Retiro en sede"
+        ? `
+    <div style="margin-top:16px; padding:20px; background:#f0f7ff; border:1px solid #cfe3fb; border-radius:8px;">
+      <h3 style="font-size:14px; margin:0 0 8px; color:#111;">📍 Retiro en sede</h3>
+      <p style="margin:0; color:#555; line-height:1.5; font-size:14px;">
+        Puedes retirar tu pedido directamente en:<br/>
+        <strong>${DIRECCION_SEDE}</strong>
+      </p>
+    </div>`
+        : ""
+    }
 
     <p style="text-align:center; color:#999; font-size:12px; margin-top:24px;">
       MTE Toys · mtetoys.cl<br/>
