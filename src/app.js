@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import comboRoutes from "./routes/comboRoutes.js";
 import webpayRoutes from "./routes/webpayRoutes.js";
+import siteContentRoutes from "./routes/siteContentRoutes.js";
 
 const app = express();
 
@@ -105,6 +106,11 @@ app.use(
 app.use(
   "/api/webpay",
   webpayRoutes
+);
+
+app.use(
+  "/api/site-content",
+  siteContentRoutes
 );
 
 
