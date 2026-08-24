@@ -292,6 +292,13 @@ export const createOrder = async (req, res) => {
     const zonaEnvio = obtenerZonaEnvio(envio.comuna);
     const metodoEnvioRecibido = typeof req.body.metodoEnvio === "string" ? req.body.metodoEnvio.trim() : null;
 
+    // Envío gratis para compras sobre $49.990 en Santiago (zonas
+    // verde y azul): Logística 360 pasa a ser la única opción,
+    // sin costo. Debe reflejar exactamente Checkout.jsx.
+    const envioGratisPorMonto =
+      (zonaEnvio === "verde" || zonaEnvio === "azul") &&
+      totalProductos >= 49990;
+
     // Métodos válidos según la zona de la comuna (debe reflejar
     // exactamente lo que el frontend ofrece en Checkout.jsx)
     const METODOS_POR_ZONA = {
@@ -300,17 +307,15 @@ export const createOrder = async (req, res) => {
       fuera: ["Bluexpress", "Starken", "Chilexpress", "Retiro en local"],
     };
 
-    const metodosValidos = METODOS_POR_ZONA[zonaEnvio] || [];
+    const metodosValidos = envioGratisPorMonto
+      ? ["Logística 360"]
+      : METODOS_POR_ZONA[zonaEnvio] || [];
 
     if (!metodosValidos.includes(metodoEnvioRecibido)) {
       return res.status(400).json({ message: "Selecciona un método de envío válido" });
     }
 
     const metodoEnvio = metodoEnvioRecibido;
-
-    // Envío gratis para compras sobre $49.990 (aplica al costo cobrado
-    // en línea; los métodos "por pagar" ya eran $0 en el checkout).
-    const envioGratisPorMonto = totalProductos >= 49990;
 
     let costoEnvio = 0;
 
