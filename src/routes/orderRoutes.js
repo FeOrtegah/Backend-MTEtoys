@@ -9,6 +9,7 @@ import {
   cancelOrder,
   markAsShipped,
   hardDeleteOrder,
+  marcarAvisoWhatsapp,
 } from "../controllers/orderController.js";
 
 import {
@@ -25,6 +26,18 @@ const router = Router();
 // Público para permitir compras como invitado.
 
 router.post("/", createOrder);
+
+
+// =====================================================
+// MARCAR AVISO DE TRANSFERENCIA POR WHATSAPP
+// =====================================================
+// Público: lo llama el cliente sin sesión, desde la
+// página de transferencia bancaria.
+
+router.patch(
+  "/:id/aviso-whatsapp",
+  marcarAvisoWhatsapp
+);
 
 
 // =====================================================

@@ -328,6 +328,10 @@ export const createOrder = async (req, res) => {
     const totalFinal = totalProductos + costoEnvio;
     const accessToken = crypto.randomBytes(24).toString("hex");
 
+    // Método de pago: solo aceptamos los dos que ofrece el
+    // checkout. Cualquier otro valor cae en "webpay" por defecto.
+    const metodoPagoRecibido = req.body.metodoPago === "transferencia" ? "transferencia" : "webpay";
+
     const pedido = new Order({
       cliente: { nombre, email, rut, telefono, facturacion, envio, direccion: `${envio.direccion} ${envio.numero}`.trim() },
       items: itemsPedido,
@@ -336,7 +340,7 @@ export const createOrder = async (req, res) => {
       costoEnvio,
       total: totalFinal,
       estado: "pendiente",
-      metodoPago: "webpay",
+      metodoPago: metodoPagoRecibido,
       accessToken,
     });
 
@@ -492,5 +496,32 @@ export const hardDeleteOrder = async (req, res) => {
   } catch (error) {
     console.error("Error eliminando pedido:", error);
     return res.status(500).json({ message: "Error al eliminar el pedido" });
+  }
+};
+
+// =====================================================
+// MARCAR AVISO DE TRANSFERENCIA POR WHATSAPP
+// =====================================================
+// Pública: la llama el cliente (sin sesión) desde la página
+// de transferencia bancaria, justo al hacer clic en el botón
+// de WhatsApp. Solo deja registro para el admin, no confirma
+// el pago por sí sola.
+
+export const marcarAvisoWhatsapp = async (req, res) => {
+  try {
+    const pedido = await Order.findById(req.params.id);
+
+    if (!pedido) {
+      return res.status(404).json({ message: "Pedido no encontrado" });
+    }
+
+    pedido.avisoWhatsappEnviado = true;
+    pedido.avisoWhatsappFecha = new Date();
+    await pedido.save();
+
+    return res.json({ message: "Registrado" });
+  } catch (error) {
+    console.error("Error registrando aviso de WhatsApp:", error);
+    return res.status(500).json({ message: "Error al registrar el aviso" });
   }
 };

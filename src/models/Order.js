@@ -303,6 +303,24 @@ const orderSchema = new mongoose.Schema(
     },
 
     // -----------------------------------------------
+    // AVISO DE TRANSFERENCIA POR WHATSAPP
+    // -----------------------------------------------
+    // Se marca cuando el cliente hace clic en el botón
+    // "Avisar por WhatsApp" en la página de transferencia.
+    // Es solo informativo para el admin, no confirma el
+    // pago por sí solo (eso lo hace confirmPayment).
+
+    avisoWhatsappEnviado: {
+      type: Boolean,
+      default: false,
+    },
+
+    avisoWhatsappFecha: {
+      type: Date,
+      default: null,
+    },
+
+    // -----------------------------------------------
     // CÓDIGO DE TRANSACCIÓN
     // -----------------------------------------------
 
