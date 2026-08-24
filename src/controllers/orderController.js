@@ -292,36 +292,33 @@ export const createOrder = async (req, res) => {
     const zonaEnvio = obtenerZonaEnvio(envio.comuna);
     const metodoEnvioRecibido = typeof req.body.metodoEnvio === "string" ? req.body.metodoEnvio.trim() : null;
 
-    let metodoEnvio = null;
+    // Métodos válidos según la zona de la comuna (debe reflejar
+    // exactamente lo que el frontend ofrece en Checkout.jsx)
+    const METODOS_POR_ZONA = {
+      verde: ["Logística 360", "Bluexpress", "Starken", "Retiro en local"],
+      azul: ["Bluexpress", "Starken", "Retiro en local"],
+      fuera: ["Bluexpress", "Starken", "Chilexpress", "Retiro en local"],
+    };
+
+    const metodosValidos = METODOS_POR_ZONA[zonaEnvio] || [];
+
+    if (!metodosValidos.includes(metodoEnvioRecibido)) {
+      return res.status(400).json({ message: "Selecciona un método de envío válido" });
+    }
+
+    const metodoEnvio = metodoEnvioRecibido;
+
+    // Envío gratis para compras sobre $49.990 (aplica al costo cobrado
+    // en línea; los métodos "por pagar" ya eran $0 en el checkout).
+    const envioGratisPorMonto = totalProductos >= 49990;
+
     let costoEnvio = 0;
 
-    if (zonaEnvio === "verde") {
-      if (metodoEnvioRecibido === "Logística 360") {
-        metodoEnvio = "Logística 360";
-        costoEnvio = COSTO_LOGISTICA_360;
-      } else if (metodoEnvioRecibido === "Bluexpress") {
-        metodoEnvio = "Bluexpress";
-        costoEnvio = 0;
-      } else {
-        return res.status(400).json({ message: "Debes seleccionar un método de envío" });
-      }
-    } else if (zonaEnvio === "azul") {
-      if (metodoEnvioRecibido === "Bluexpress") {
-        metodoEnvio = "Bluexpress";
-        costoEnvio = 0;
-      } else {
-        return res.status(400).json({ message: "Para tu comuna el único método de envío disponible es Bluexpress" });
-      }
-    } else {
-      if (metodoEnvioRecibido === "Chilexpress") {
-        metodoEnvio = "Chilexpress";
-        // Chilexpress es "por pagar": el cliente paga el envío
-        // directamente al recibir, no se cobra en el checkout.
-        costoEnvio = 0;
-      } else {
-        return res.status(400).json({ message: "Debes seleccionar un método de envío" });
-      }
+    if (metodoEnvio === "Logística 360" && !envioGratisPorMonto) {
+      costoEnvio = COSTO_LOGISTICA_360;
     }
+    // Bluexpress, Starken, Chilexpress y Retiro en local son $0
+    // en el checkout (por pagar al recibir, o gratis si es retiro).
 
     const totalFinal = totalProductos + costoEnvio;
     const accessToken = crypto.randomBytes(24).toString("hex");
