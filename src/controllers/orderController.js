@@ -470,3 +470,25 @@ export const markAsShipped = async (req, res) => {
     return res.status(500).json({ message: "Error al marcar el pedido como enviado" });
   }
 };
+
+// =====================================================
+// ELIMINAR PEDIDO PERMANENTEMENTE
+// =====================================================
+// Borrado real de la base de datos. Pensado para limpiar
+// pedidos de prueba u ordenes erróneas. No repone stock
+// ni revierte pagos: es solo borrar el registro.
+
+export const hardDeleteOrder = async (req, res) => {
+  try {
+    const pedido = await Order.findByIdAndDelete(req.params.id);
+
+    if (!pedido) {
+      return res.status(404).json({ message: "Pedido no encontrado" });
+    }
+
+    return res.json({ message: "Pedido eliminado", id: req.params.id });
+  } catch (error) {
+    console.error("Error eliminando pedido:", error);
+    return res.status(500).json({ message: "Error al eliminar el pedido" });
+  }
+};

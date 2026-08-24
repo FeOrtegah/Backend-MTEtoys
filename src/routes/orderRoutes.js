@@ -8,6 +8,7 @@ import {
   confirmPayment,
   cancelOrder,
   markAsShipped,
+  hardDeleteOrder,
 } from "../controllers/orderController.js";
 
 import {
@@ -102,6 +103,19 @@ router.patch(
   protegerRuta,
   soloAdmin,
   markAsShipped
+);
+
+
+// =====================================================
+// ELIMINAR PEDIDO PERMANENTEMENTE
+// SOLO ADMIN
+// =====================================================
+
+router.delete(
+  "/:id",
+  protegerRuta,
+  soloAdmin,
+  hardDeleteOrder
 );
 
 export default router;
