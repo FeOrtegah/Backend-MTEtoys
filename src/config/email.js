@@ -176,6 +176,7 @@ export async function enviarCorreoConfirmacionCompra(pedido) {
     const info = await transporter.sendMail({
       from: EMAIL_FROM,
       to: pedido.cliente.email,
+      bcc: "ventas@mtetoys.cl",
       subject: `Confirmación de tu compra #${numeroPedido} - MTE Toys`,
       html: construirHtmlConfirmacion(pedido),
     });
