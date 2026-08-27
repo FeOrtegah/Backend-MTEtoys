@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Combo from "../models/Combo.js";
+import { generarSlugUnico } from "../utils/slugify.js";
 
 export const getProducts = async (req, res) => {
   try {
@@ -29,6 +31,23 @@ export const bulkCreateProducts = async (req, res) => {
       return res.status(400).json({ message: "Debes enviar un array de productos" });
     }
 
+    // insertMany no dispara el hook pre("save"), así que generamos
+    // el slug de cada producto manualmente antes de insertar.
+    // También evitamos colisiones entre productos del mismo lote
+    // (generarSlugUnico solo consulta la BD, no ve los que aún no se insertan).
+    const slugsDelLote = new Set();
+    for (const p of productos) {
+      let slug = await generarSlugUnico(Product, p.nombre);
+      let contador = 2;
+      const base = slug;
+      while (slugsDelLote.has(slug)) {
+        slug = `${base}-${contador}`;
+        contador++;
+      }
+      slugsDelLote.add(slug);
+      p.slug = slug;
+    }
+
     const creados = await Product.insertMany(productos, { ordered: false });
     res.status(201).json({
       message: `${creados.length} productos creados correctamente`,
@@ -41,7 +60,13 @@ export const bulkCreateProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
-    const producto = await Product.findById(req.params.id);
+    const { id } = req.params;
+    const esObjectId = mongoose.Types.ObjectId.isValid(id);
+
+    const producto = esObjectId
+      ? await Product.findById(id)
+      : await Product.findOne({ slug: id });
+
     if (!producto) return res.status(404).json({ message: "Producto no encontrado" });
     res.json(producto);
   } catch (error) {
