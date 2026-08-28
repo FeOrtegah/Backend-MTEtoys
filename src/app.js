@@ -8,6 +8,7 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import comboRoutes from "./routes/comboRoutes.js";
 import webpayRoutes from "./routes/webpayRoutes.js";
 import siteContentRoutes from "./routes/siteContentRoutes.js";
+import sitemapRoutes from "./routes/sitemapRoutes.js";
 
 const app = express();
 
@@ -111,6 +112,11 @@ app.use(
 app.use(
   "/api/site-content",
   siteContentRoutes
+);
+
+app.use(
+  "/sitemap.xml",
+  sitemapRoutes
 );
 
 
