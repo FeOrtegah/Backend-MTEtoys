@@ -1,5 +1,7 @@
 import Address from "../models/Address.js";
 
+const MAXIMO_DIRECCIONES = 3;
+
 // =====================================================
 // MIS DIRECCIONES
 // =====================================================
@@ -45,6 +47,16 @@ export const createAddress = async (req, res) => {
     ) {
       return res.status(400).json({
         message: "Faltan datos obligatorios de la dirección",
+      });
+    }
+
+    const totalActual = await Address.countDocuments({
+      usuario: req.usuario.id,
+    });
+
+    if (totalActual >= MAXIMO_DIRECCIONES) {
+      return res.status(400).json({
+        message: `Ya tienes el máximo de ${MAXIMO_DIRECCIONES} direcciones guardadas. Elimina una para agregar otra.`,
       });
     }
 
