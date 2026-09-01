@@ -27,6 +27,7 @@ export const createAddress = async (req, res) => {
     const {
       nombre,
       nombreReceptor,
+      rut,
       telefono,
       direccion,
       numero,
@@ -64,6 +65,7 @@ export const createAddress = async (req, res) => {
       usuario: req.usuario.id,
       nombre,
       nombreReceptor,
+      rut: rut || "",
       telefono,
       direccion,
       numero,
@@ -98,6 +100,7 @@ export const updateAddress = async (req, res) => {
     const campos = [
       "nombre",
       "nombreReceptor",
+      "rut",
       "telefono",
       "direccion",
       "numero",

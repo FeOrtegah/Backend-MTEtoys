@@ -650,11 +650,23 @@ export const updateMe = async (
         20
       );
 
+    const rut =
+      req.body.rut !== undefined
+        ? limpiarTexto(req.body.rut, 12)
+        : undefined;
+
 
     if (telefono && !validarTelefono(telefono)) {
       return res.status(400).json({
         message:
           "El teléfono no es válido",
+      });
+    }
+
+    if (rut && !validarRut(rut)) {
+      return res.status(400).json({
+        message:
+          "El RUT no es válido",
       });
     }
 
@@ -666,6 +678,9 @@ export const updateMe = async (
         {
           nombre,
           telefono,
+          ...(rut !== undefined
+            ? { rut }
+            : {}),
         },
 
         {

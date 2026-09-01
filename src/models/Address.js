@@ -28,6 +28,12 @@ const addressSchema = new mongoose.Schema(
       trim: true,
     },
 
+    rut: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     telefono: {
       type: String,
       required: true,

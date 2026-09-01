@@ -121,6 +121,13 @@ const userSchema = new mongoose.Schema(
       maxlength: 100,
     },
 
+    rut: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 12,
+    },
+
     telefono: {
       type: String,
       default: "",
