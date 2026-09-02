@@ -8,13 +8,15 @@ import mongoose from "mongoose";
 //   - "banner"    → banners rotativos del inicio
 //   - "brand"     → logos de "Compra por marca"
 //   - "giftCard"  → tarjetas de "Regalos por Precio"
+//   - "productAd" → imágenes verticales al lado del
+//                   listado de productos (/productos)
 
 const siteContentSchema = new mongoose.Schema(
   {
     seccion: {
       type: String,
       required: true,
-      enum: ["banner", "brand", "giftCard"],
+      enum: ["banner", "brand", "giftCard", "productAd"],
     },
 
     orden: { type: Number, default: 0 },
