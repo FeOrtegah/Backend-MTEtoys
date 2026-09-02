@@ -570,6 +570,7 @@ export const login = async (
 
     res.json({
       token,
+      id: usuario._id,
       email: usuario.email,
       rol: usuario.rol,
       nombre: usuario.nombre,
