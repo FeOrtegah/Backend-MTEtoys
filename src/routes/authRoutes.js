@@ -5,6 +5,7 @@ import {
   register,
   registerAdmin,
   login,
+  logout,
   bootstrapAdmin,
   getMe,
   updateMe,
@@ -57,6 +58,12 @@ router.post(
   "/login",
   loginLimiter,
   login
+);
+
+
+router.post(
+  "/logout",
+  logout
 );
 
 

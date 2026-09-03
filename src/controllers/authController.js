@@ -21,6 +21,30 @@ const normalizarEmail = (email) => {
 
 
 // -----------------------------------------------------
+// Opciones de la cookie de sesión (httpOnly)
+// -----------------------------------------------------
+// httpOnly: JavaScript del navegador no puede leerla ni
+// robarla, ni siquiera si hubiera una vulnerabilidad XSS.
+//
+// secure/sameSite solo se activan en producción: en local
+// (npm run dev) el sitio corre en http://, y una cookie
+// "secure" jamás se manda ni se guarda sobre http:// — el
+// login se rompería completo en desarrollo si esto fuera
+// siempre true. En cPanel hay que asegurarse de tener la
+// variable de entorno NODE_ENV=production configurada.
+
+const esProduccion =
+  process.env.NODE_ENV === "production";
+
+const cookieOptionsSesion = {
+  httpOnly: true,
+  secure: esProduccion,
+  sameSite: esProduccion ? "none" : "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días, igual que el JWT
+};
+
+
+// -----------------------------------------------------
 // Limpiar texto
 // -----------------------------------------------------
 
@@ -568,8 +592,13 @@ export const login = async (
       );
 
 
-    res.json({
+    res.cookie(
+      "token",
       token,
+      cookieOptionsSesion
+    );
+
+    res.json({
       id: usuario._id,
       email: usuario.email,
       rol: usuario.rol,
@@ -1151,4 +1180,21 @@ export const setDefaultAddress = async (
         "No se pudo cambiar la dirección predeterminada",
     });
   }
+};
+
+// =====================================================
+// CERRAR SESIÓN
+// =====================================================
+// Borra la cookie httpOnly. El frontend no puede leerla
+// ni borrarla directamente por JS, por eso necesita este
+// endpoint.
+
+export const logout = (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: esProduccion,
+    sameSite: esProduccion ? "none" : "lax",
+  });
+
+  res.json({ message: "Sesión cerrada" });
 };

@@ -4,6 +4,9 @@ import jwt from "jsonwebtoken";
 // =====================================================
 // PROTEGER RUTA
 // =====================================================
+// Lee el JWT desde la cookie httpOnly "token" (la pone
+// el login). Ya no viaja en el header Authorization ni
+// se guarda en localStorage del navegador.
 
 export const protegerRuta = (
   req,
@@ -11,23 +14,8 @@ export const protegerRuta = (
   next
 ) => {
 
-  const authHeader =
-    req.headers.authorization;
-
-
-  if (
-    !authHeader ||
-    !authHeader.startsWith("Bearer ")
-  ) {
-    return res.status(401).json({
-      message:
-        "No autorizado, falta token",
-    });
-  }
-
-
   const token =
-    authHeader.split(" ")[1];
+    req.cookies?.token;
 
 
   if (!token) {
