@@ -286,6 +286,7 @@ const orderSchema = new mongoose.Schema(
       enum: [
         "pendiente",
         "pagado",
+        "preparando",
         "enviado",
         "cancelado",
       ],

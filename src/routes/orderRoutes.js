@@ -7,6 +7,7 @@ import {
   getOrderById,
   confirmPayment,
   cancelOrder,
+  markAsPreparing,
   markAsShipped,
   hardDeleteOrder,
   marcarAvisoWhatsapp,
@@ -103,6 +104,19 @@ router.patch(
   protegerRuta,
   soloAdmin,
   cancelOrder
+);
+
+
+// =====================================================
+// MARCAR COMO EN PREPARACIÓN
+// SOLO ADMIN
+// =====================================================
+
+router.patch(
+  "/:id/marcar-preparando",
+  protegerRuta,
+  soloAdmin,
+  markAsPreparing
 );
 
 
