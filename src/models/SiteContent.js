@@ -45,6 +45,12 @@ const siteContentSchema = new mongoose.Schema(
     // usado para armar el link de filtro automáticamente.
     edadMinima: { type: Number, default: null },
     edadMaxima: { type: Number, default: null },
+
+    // Solo para "ageGiftCard": qué figura eligió el
+    // admin (ej: "figura-circulo"). Si no se elige
+    // ninguna, se asigna una automáticamente según la
+    // posición en la lista.
+    forma: { type: String, default: "" },
   },
   { timestamps: true }
 );

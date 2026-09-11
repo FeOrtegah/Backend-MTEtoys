@@ -37,6 +37,7 @@ export const createContent = async (req, res) => {
       orden,
       edadMinima,
       edadMaxima,
+      forma,
     } = req.body;
 
     if (!seccion) {
@@ -58,6 +59,7 @@ export const createContent = async (req, res) => {
       orden: orden ?? 0,
       edadMinima: edadMinima ?? null,
       edadMaxima: edadMaxima ?? null,
+      forma: forma || "",
     });
 
     res.status(201).json(nuevo);
@@ -80,6 +82,7 @@ export const updateContent = async (req, res) => {
       orden,
       edadMinima,
       edadMaxima,
+      forma,
     } = req.body;
 
     const item = await SiteContent.findById(req.params.id);
@@ -95,6 +98,7 @@ export const updateContent = async (req, res) => {
     if (orden !== undefined) item.orden = orden;
     if (edadMinima !== undefined) item.edadMinima = edadMinima;
     if (edadMaxima !== undefined) item.edadMaxima = edadMaxima;
+    if (forma !== undefined) item.forma = forma;
 
     await item.save();
 
