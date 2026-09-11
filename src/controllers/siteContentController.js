@@ -28,19 +28,36 @@ export const getContentBySection = async (req, res) => {
 
 export const createContent = async (req, res) => {
   try {
-    const { seccion, imagen, titulo, subtitulo, link, orden } = req.body;
+    const {
+      seccion,
+      imagen,
+      titulo,
+      subtitulo,
+      link,
+      orden,
+      edadMinima,
+      edadMaxima,
+    } = req.body;
 
-    if (!seccion || !imagen) {
-      return res.status(400).json({ message: "Faltan seccion e imagen" });
+    if (!seccion) {
+      return res.status(400).json({ message: "Falta seccion" });
+    }
+
+    // Todas las secciones necesitan imagen, excepto las
+    // tarjetas de "Regalos por edad" (son figuras de color).
+    if (seccion !== "ageGiftCard" && !imagen) {
+      return res.status(400).json({ message: "Falta imagen" });
     }
 
     const nuevo = await SiteContent.create({
       seccion,
-      imagen,
+      imagen: imagen || "",
       titulo: titulo || "",
       subtitulo: subtitulo || "",
       link: link || "",
       orden: orden ?? 0,
+      edadMinima: edadMinima ?? null,
+      edadMaxima: edadMaxima ?? null,
     });
 
     res.status(201).json(nuevo);
@@ -55,7 +72,15 @@ export const createContent = async (req, res) => {
 
 export const updateContent = async (req, res) => {
   try {
-    const { imagen, titulo, subtitulo, link, orden } = req.body;
+    const {
+      imagen,
+      titulo,
+      subtitulo,
+      link,
+      orden,
+      edadMinima,
+      edadMaxima,
+    } = req.body;
 
     const item = await SiteContent.findById(req.params.id);
 
@@ -68,6 +93,8 @@ export const updateContent = async (req, res) => {
     if (subtitulo !== undefined) item.subtitulo = subtitulo;
     if (link !== undefined) item.link = link;
     if (orden !== undefined) item.orden = orden;
+    if (edadMinima !== undefined) item.edadMinima = edadMinima;
+    if (edadMaxima !== undefined) item.edadMaxima = edadMaxima;
 
     await item.save();
 

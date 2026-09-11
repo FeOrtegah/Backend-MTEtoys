@@ -16,12 +16,23 @@ const siteContentSchema = new mongoose.Schema(
     seccion: {
       type: String,
       required: true,
-      enum: ["banner", "brand", "giftCard", "productAd"],
+      enum: [
+        "banner",
+        "brand",
+        "giftCard",
+        "productAd",
+        "ageGiftCard",
+        "secondaryBanner",
+      ],
     },
 
     orden: { type: Number, default: 0 },
 
-    imagen: { type: String, required: true },
+    // Obligatoria para banners/marcas/regalos por
+    // precio; las tarjetas de "Regalos por edad" no
+    // llevan imagen (son figuras de color), por eso
+    // ya no es obligatoria a nivel de esquema.
+    imagen: { type: String, default: "" },
 
     titulo: { type: String, default: "" },
     subtitulo: { type: String, default: "" },
@@ -29,6 +40,11 @@ const siteContentSchema = new mongoose.Schema(
     // A dónde lleva la tarjeta al hacer click
     // (ej: /productos?categoria=mattel, /productos?min=1&max=10000)
     link: { type: String, default: "" },
+
+    // Solo para "ageGiftCard": rango de edad en meses,
+    // usado para armar el link de filtro automáticamente.
+    edadMinima: { type: Number, default: null },
+    edadMaxima: { type: Number, default: null },
   },
   { timestamps: true }
 );

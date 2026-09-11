@@ -24,6 +24,12 @@ const productSchema = new mongoose.Schema(
       alto: { type: Number, default: null, min: 0 }, // cm
       peso: { type: Number, default: null, min: 0 }, // kg
     },
+
+    // Rango de edad recomendado, en MESES (para tener una
+    // sola unidad: 0-12 meses = 0 a 12, 1-2 años = 12 a 24,
+    // etc). Se usa para el filtro "Regalos por edad".
+    edadMinima: { type: Number, default: null, min: 0 },
+    edadMaxima: { type: Number, default: null, min: 0 },
   },
   { timestamps: true }
 );
