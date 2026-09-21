@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema(
     imagenes: { type: [String], default: [] },
     stock: { type: Number, required: true, default: 0, min: 0 },
     activo: { type: Boolean, default: true },
+    envioGratis: { type: Boolean, default: false },
 
     // Dimensiones de envío (para calcular costos con
     // couriers a futuro, y para que el cliente sepa qué
