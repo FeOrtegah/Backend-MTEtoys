@@ -38,6 +38,7 @@ export const createContent = async (req, res) => {
       edadMinima,
       edadMaxima,
       forma,
+      umbralEnvioGratis,
     } = req.body;
 
     if (!seccion) {
@@ -45,8 +46,13 @@ export const createContent = async (req, res) => {
     }
 
     // Todas las secciones necesitan imagen, excepto las
-    // tarjetas de "Regalos por edad" (son figuras de color).
-    if (seccion !== "ageGiftCard" && !imagen) {
+    // tarjetas de "Regalos por edad" (son figuras de color)
+    // y la configuración de envío (es solo un número).
+    if (
+      seccion !== "ageGiftCard" &&
+      seccion !== "shippingConfig" &&
+      !imagen
+    ) {
       return res.status(400).json({ message: "Falta imagen" });
     }
 
@@ -60,6 +66,7 @@ export const createContent = async (req, res) => {
       edadMinima: edadMinima ?? null,
       edadMaxima: edadMaxima ?? null,
       forma: forma || "",
+      umbralEnvioGratis: umbralEnvioGratis ?? null,
     });
 
     res.status(201).json(nuevo);
@@ -83,6 +90,7 @@ export const updateContent = async (req, res) => {
       edadMinima,
       edadMaxima,
       forma,
+      umbralEnvioGratis,
     } = req.body;
 
     const item = await SiteContent.findById(req.params.id);
@@ -99,6 +107,8 @@ export const updateContent = async (req, res) => {
     if (edadMinima !== undefined) item.edadMinima = edadMinima;
     if (edadMaxima !== undefined) item.edadMaxima = edadMaxima;
     if (forma !== undefined) item.forma = forma;
+    if (umbralEnvioGratis !== undefined)
+      item.umbralEnvioGratis = umbralEnvioGratis;
 
     await item.save();
 

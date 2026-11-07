@@ -23,6 +23,7 @@ const siteContentSchema = new mongoose.Schema(
         "productAd",
         "ageGiftCard",
         "secondaryBanner",
+        "shippingConfig",
       ],
     },
 
@@ -51,6 +52,12 @@ const siteContentSchema = new mongoose.Schema(
     // ninguna, se asigna una automáticamente según la
     // posición en la lista.
     forma: { type: String, default: "" },
+
+    // Solo para "shippingConfig": monto mínimo de compra
+    // (CLP) desde el cual el envío pasa a ser gratis.
+    // Editable desde el admin para no depender de un
+    // cambio de código.
+    umbralEnvioGratis: { type: Number, default: null },
   },
   { timestamps: true }
 );

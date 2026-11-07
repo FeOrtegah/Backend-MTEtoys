@@ -12,6 +12,7 @@ import siteContentRoutes from "./routes/siteContentRoutes.js";
 import addressRoutes from "./routes/addressRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import sitemapRoutes from "./routes/sitemapRoutes.js";
+import etiquetaRoutes from "./routes/etiquetaRoutes.js";
 
 const app = express();
 
@@ -132,6 +133,11 @@ app.use(
 app.use(
   "/sitemap.xml",
   sitemapRoutes
+);
+
+app.use(
+  "/api/etiquetas",
+  etiquetaRoutes
 );
 
 
