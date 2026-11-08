@@ -24,6 +24,7 @@ const siteContentSchema = new mongoose.Schema(
         "ageGiftCard",
         "secondaryBanner",
         "shippingConfig",
+        "subBanner",
       ],
     },
 

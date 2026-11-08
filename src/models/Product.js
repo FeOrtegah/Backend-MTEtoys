@@ -31,6 +31,15 @@ const productSchema = new mongoose.Schema(
     // etc). Se usa para el filtro "Regalos por edad".
     edadMinima: { type: Number, default: null, min: 0 },
     edadMaxima: { type: Number, default: null, min: 0 },
+
+    // Etiqueta estacional/promocional asignada desde el
+    // admin (ej: "Black Week"). Solo se muestra si además
+    // está vigente según su rango de fechas.
+    etiquetaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Etiqueta",
+      default: null,
+    },
   },
   { timestamps: true }
 );
