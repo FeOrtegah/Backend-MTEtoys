@@ -13,8 +13,13 @@ import addressRoutes from "./routes/addressRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import sitemapRoutes from "./routes/sitemapRoutes.js";
 import etiquetaRoutes from "./routes/etiquetaRoutes.js";
+import cuponRoutes from "./routes/cuponRoutes.js";
 
 const app = express();
+
+// Detrás del proxy de cPanel: necesario para que el rate limit
+// vea la IP real del visitante y no la del proxy.
+app.set("trust proxy", 1);
 
 const allowedOrigins = [
   "https://mtetoys.cl",
@@ -138,6 +143,11 @@ app.use(
 app.use(
   "/api/etiquetas",
   etiquetaRoutes
+);
+
+app.use(
+  "/api/cupones",
+  cuponRoutes
 );
 
 

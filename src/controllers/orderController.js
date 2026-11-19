@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import SiteContent from "../models/SiteContent.js";
+import { reservarCupon, liberarCuponDePedido, CuponError } from "../utils/cupones.js";
 import { enviarCorreoConfirmacionCompra } from "../config/email.js";
 
 // =====================================================
@@ -49,6 +51,18 @@ const COMUNAS_AZULES = [
 ];
 
 const COSTO_LOGISTICA_360 = 3490;
+const UMBRAL_ENVIO_GRATIS_DEFECTO = 49990;
+
+// Umbral editable desde el admin (SiteContent "shippingConfig")
+const obtenerUmbralEnvioGratis = async () => {
+  try {
+    const cfg = await SiteContent.findOne({ seccion: "shippingConfig" });
+    const valor = Number(cfg?.umbralEnvioGratis);
+    return Number.isFinite(valor) && valor > 0 ? valor : UMBRAL_ENVIO_GRATIS_DEFECTO;
+  } catch {
+    return UMBRAL_ENVIO_GRATIS_DEFECTO;
+  }
+};
 // Chilexpress ahora es "por pagar" al recibir, no se cobra en checkout.
 // Se deja este valor documentado por si en el futuro se vuelve a cobrar en línea.
 const COSTO_CHILEXPRESS_REGIONES = 4990; // eslint-disable-line no-unused-vars
@@ -257,6 +271,7 @@ export const createOrder = async (req, res) => {
 
     const itemsPedido = [];
     let total = 0;
+    let todosEnvioGratis = true;
 
     for (const item of items) {
       if (!item || !item.producto || !mongoose.Types.ObjectId.isValid(item.producto)) {
@@ -277,6 +292,8 @@ export const createOrder = async (req, res) => {
         return res.status(400).json({ message: `Stock insuficiente para ${producto.nombre}` });
       }
 
+      if (producto.envioGratis !== true) todosEnvioGratis = false;
+
       const precioUnitario = getPrecioVenta(producto);
       total += precioUnitario * cantidad;
 
@@ -295,9 +312,12 @@ export const createOrder = async (req, res) => {
     // Envío gratis para compras sobre $49.990 en Santiago (zonas
     // verde y azul): Logística 360 pasa a ser la única opción,
     // sin costo. Debe reflejar exactamente Checkout.jsx.
+    // El umbral es editable; se evalúa sobre el subtotal ANTES del
+    // cupón. Si todos los productos tienen envío gratis, también aplica.
+    const umbralEnvioGratis = await obtenerUmbralEnvioGratis();
     const envioGratisPorMonto =
       (zonaEnvio === "verde" || zonaEnvio === "azul") &&
-      totalProductos >= 49990;
+      (totalProductos >= umbralEnvioGratis || todosEnvioGratis);
 
     // Métodos válidos según la zona de la comuna (debe reflejar
     // exactamente lo que el frontend ofrece en Checkout.jsx)
@@ -308,7 +328,7 @@ export const createOrder = async (req, res) => {
     };
 
     const metodosValidos = envioGratisPorMonto
-      ? ["Logística 360"]
+      ? ["Logística 360", "Envío gratis"]
       : METODOS_POR_ZONA[zonaEnvio] || [];
 
     if (!metodosValidos.includes(metodoEnvioRecibido)) {
@@ -325,12 +345,14 @@ export const createOrder = async (req, res) => {
     // Bluexpress, Starken, Chilexpress y Retiro en sede son $0
     // en el checkout (por pagar al recibir, o gratis si es retiro).
 
-    const totalFinal = totalProductos + costoEnvio;
     const accessToken = crypto.randomBytes(24).toString("hex");
 
     // Método de pago: solo aceptamos los dos que ofrece el
     // checkout. Cualquier otro valor cae en "webpay" por defecto.
     const metodoPagoRecibido = req.body.metodoPago === "transferencia" ? "transferencia" : "webpay";
+
+    const cuponCodigoRecibido =
+      typeof req.body.cuponCodigo === "string" ? req.body.cuponCodigo.trim() : "";
 
     const pedido = new Order({
       cliente: { nombre, email, rut, telefono, facturacion, envio, direccion: `${envio.direccion} ${envio.numero}`.trim() },
@@ -338,19 +360,49 @@ export const createOrder = async (req, res) => {
       totalProductos,
       metodoEnvio,
       costoEnvio,
-      total: totalFinal,
+      total: totalProductos + costoEnvio,
       estado: "pendiente",
       metodoPago: metodoPagoRecibido,
       accessToken,
     });
 
-    const nuevoPedido = await pedido.save();
+    // Cupón: se reserva de forma atómica ANTES de guardar el pedido
+    // (el _id ya existe). El descuento se calcula aquí, nunca se
+    // confía en el monto que envía el navegador.
+    let cuponReservado = false;
+
+    if (cuponCodigoRecibido) {
+      const { cupon, descuento } = await reservarCupon({
+        codigo: cuponCodigoRecibido,
+        subtotal: totalProductos,
+        cliente: { rut, email, telefono, facturacion, envio },
+        pedidoId: pedido._id,
+      });
+
+      cuponReservado = true;
+      pedido.cuponCodigo = cupon.codigo;
+      pedido.descuento = descuento;
+      pedido.total = totalProductos - descuento + costoEnvio;
+    }
+
+    let nuevoPedido;
+
+    try {
+      nuevoPedido = await pedido.save();
+    } catch (errorGuardado) {
+      if (cuponReservado) await liberarCuponDePedido(pedido._id);
+      throw errorGuardado;
+    }
 
     // El documento recién guardado en memoria SÍ incluye accessToken
     // (select:false solo oculta el campo en consultas posteriores),
     // así que se entrega una única vez en esta respuesta.
     return res.status(201).json(nuevoPedido);
   } catch (error) {
+    if (error instanceof CuponError) {
+      return res.status(error.status).json({ message: error.message });
+    }
+
     console.error("Error creando pedido:", error);
     return res.status(500).json({ message: "Error al crear el pedido" });
   }

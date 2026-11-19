@@ -253,7 +253,21 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // Total final: productos + envío.
+    // Cupón de descuento aplicado (si hay). El descuento ya está
+    // restado del total; totalProductos queda SIN descuento.
+    cuponCodigo: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    descuento: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Total final: productos - descuento + envío.
     // Es el monto que se cobra en Webpay.
     total: {
       type: Number,
@@ -267,7 +281,7 @@ const orderSchema = new mongoose.Schema(
 
     metodoEnvio: {
       type: String,
-      enum: ["Logística 360", "Bluexpress", "Starken", "Chilexpress", "Retiro en sede", null],
+      enum: ["Logística 360", "Bluexpress", "Starken", "Chilexpress", "Retiro en sede", "Envío gratis", null],
       default: null,
     },
 
@@ -369,6 +383,42 @@ orderSchema.index({
   createdAt: -1,
 });
 
+
+// =====================================================
+// CUPONES: el estado del pedido manda sobre el cupón
+// =====================================================
+// Cancelado o eliminado => se libera el cupón.
+// Pagado / preparando / enviado => la reserva pasa a "usado".
+// Se hace aquí para cubrir TODOS los caminos (admin, Webpay,
+// eliminación) sin tocar cada controlador. Import dinámico
+// para evitar la dependencia circular con utils/cupones.js.
+
+orderSchema.post("save", async function (doc) {
+  if (!doc.cuponCodigo) return;
+
+  try {
+    const { liberarCuponDePedido, confirmarCuponDePedido } = await import("../utils/cupones.js");
+
+    if (doc.estado === "cancelado") {
+      await liberarCuponDePedido(doc._id);
+    } else if (["pagado", "preparando", "enviado"].includes(doc.estado)) {
+      await confirmarCuponDePedido(doc._id);
+    }
+  } catch (error) {
+    console.error("Error actualizando cupón del pedido:", error);
+  }
+});
+
+orderSchema.post("findOneAndDelete", async function (doc) {
+  if (!doc?.cuponCodigo) return;
+
+  try {
+    const { liberarCuponDePedido } = await import("../utils/cupones.js");
+    await liberarCuponDePedido(doc._id);
+  } catch (error) {
+    console.error("Error liberando cupón del pedido eliminado:", error);
+  }
+});
 
 export default mongoose.model(
   "Order",

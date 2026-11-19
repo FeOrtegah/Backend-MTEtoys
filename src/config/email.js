@@ -105,6 +105,10 @@ function construirHtmlConfirmacion(pedido) {
           <td style="padding:4px 0; color:#555;">Subtotal productos</td>
           <td style="padding:4px 0; text-align:right; color:#555;">${formatearCLP(pedido.totalProductos)}</td>
         </tr>
+        ${pedido.descuento > 0 ? `<tr>
+          <td style="padding:4px 0; color:#2e7d32;">Descuento (cupón ${pedido.cuponCodigo})</td>
+          <td style="padding:4px 0; text-align:right; color:#2e7d32;">-${formatearCLP(pedido.descuento)}</td>
+        </tr>` : ""}
         <tr>
           <td style="padding:4px 0; color:#555;">Envío (${pedido.metodoEnvio || "-"})</td>
           <td style="padding:4px 0; text-align:right; color:#555;">${formatearCLP(pedido.costoEnvio)}</td>
