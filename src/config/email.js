@@ -34,6 +34,38 @@ const EMAIL_FROM =
   process.env.EMAIL_FROM || process.env.SMTP_USER;
 
 // =====================================================
+// DIAGNÓSTICO AL ARRANCAR
+// =====================================================
+// Escribe en el log (stderr.log) qué variables faltan y si el servidor
+// de correo acepta la conexión, así se ve el estado apenas se hace
+// Stop/Start de la app, sin esperar una compra. Nunca muestra la contraseña.
+
+const faltantes = ["SMTP_HOST", "SMTP_USER", "SMTP_PASS"].filter(
+  (nombre) => !process.env[nombre]
+);
+
+if (faltantes.length > 0) {
+  console.warn(
+    `[correo] Faltan variables: ${faltantes.join(", ")}. No se enviarán correos hasta agregarlas y reiniciar la app.`
+  );
+} else {
+  console.log(
+    `[correo] Variables cargadas (host ${process.env.SMTP_HOST}, puerto ${
+      Number(process.env.SMTP_PORT) || 465
+    }, secure ${process.env.SMTP_SECURE ?? "true (por defecto)"}, usuario ${process.env.SMTP_USER}). Probando conexión...`
+  );
+
+  transporter
+    .verify()
+    .then(() => console.log("[correo] Conexión SMTP OK: los correos se pueden enviar."))
+    .catch((error) =>
+      console.error(
+        `[correo] No se pudo conectar o autenticar con el servidor de correo: ${error.message}`
+      )
+    );
+}
+
+// =====================================================
 // DIRECCIÓN DE LA SEDE (retiro en persona)
 // =====================================================
 
