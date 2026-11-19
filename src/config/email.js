@@ -16,13 +16,25 @@ const smtpConfigurado =
   process.env.SMTP_USER &&
   process.env.SMTP_PASS;
 
+// En cPanel a veces SMTP_PORT no llega a la app (la plataforma descarta
+// algunas variables) y se usa 465 por defecto. El puerto 465 SIEMPRE es
+// conexión cifrada desde el primer byte; con secure:false la conexión
+// se queda esperando ("Greeting never received"). Por eso en 465 se
+// fuerza secure:true; en otros puertos (587) se respeta SMTP_SECURE.
+const SMTP_PUERTO = Number(process.env.SMTP_PORT) || 465;
+
+const SMTP_SEGURO =
+  SMTP_PUERTO === 465
+    ? true
+    : process.env.SMTP_SECURE
+    ? process.env.SMTP_SECURE === "true"
+    : false;
+
 const transporter = smtpConfigurado
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT) || 465,
-      secure: process.env.SMTP_SECURE
-        ? process.env.SMTP_SECURE === "true"
-        : true,
+      port: SMTP_PUERTO,
+      secure: SMTP_SEGURO,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -51,9 +63,7 @@ if (faltantes.length > 0) {
 } else {
   // console.warn (no console.log): en cPanel solo stderr.log queda guardado
   console.warn(
-    `[correo] Variables cargadas (host ${process.env.SMTP_HOST}, puerto ${
-      Number(process.env.SMTP_PORT) || 465
-    }, secure ${process.env.SMTP_SECURE ?? "true (por defecto)"}, usuario ${process.env.SMTP_USER}). Probando conexión...`
+    `[correo] Variables cargadas (host ${process.env.SMTP_HOST}, puerto ${SMTP_PUERTO}, conexión cifrada ${SMTP_SEGURO ? "sí" : "no (STARTTLS)"}, usuario ${process.env.SMTP_USER}). Probando conexión...`
   );
 
   transporter
