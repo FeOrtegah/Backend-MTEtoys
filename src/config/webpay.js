@@ -34,4 +34,13 @@ function getWebpayOptions() {
   );
 }
 
+// Diagnóstico: queda en stderr.log al iniciar la app (sin mostrar llaves)
+console.error(
+  `[Webpay] modo: ${
+    (process.env.WEBPAY_ENV || "").trim() === "production"
+      ? "PRODUCCIÓN"
+      : "INTEGRACIÓN (pruebas)"
+  } | WEBPAY_ENV="${process.env.WEBPAY_ENV}" | código comercio termina en ...${(process.env.WEBPAY_COMMERCE_CODE || "").trim().slice(-4)}`
+);
+
 export const webpayTransaction = new WebpayPlus.Transaction(getWebpayOptions());
