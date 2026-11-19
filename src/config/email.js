@@ -37,7 +37,7 @@ const EMAIL_FROM =
 // DIRECCIÓN DE LA SEDE (retiro en persona)
 // =====================================================
 
-const DIRECCION_SEDE = "Heraldo Latorre 974, Pudahuel";
+export const DIRECCION_SEDE = "Heraldo Latorre 974, Pudahuel";
 
 // =====================================================
 // FORMATO DE PESOS CHILENOS
@@ -52,7 +52,11 @@ const formatearCLP = (valor) =>
 // No es una boleta tributaria (SII). Es solo un correo
 // informativo para el cliente.
 
-function construirHtmlConfirmacion(pedido) {
+const urlMapaSede = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+  DIRECCION_SEDE
+)}`;
+
+export function construirHtmlConfirmacion(pedido) {
   const numeroPedido = pedido._id
     .toString()
     .slice(-8)
@@ -120,6 +124,32 @@ function construirHtmlConfirmacion(pedido) {
       </table>
     </div>
 
+    ${
+      pedido.metodoEnvio === "Retiro en sede"
+        ? `
+    <div style="margin-top:20px; padding:20px; background:#f0f7ff; border:2px solid #9ec5f5; border-radius:8px;">
+      <h3 style="font-size:16px; margin:0 0 10px; color:#111;">📍 Dónde retirar tu pedido</h3>
+      <p style="margin:0 0 12px; color:#333; line-height:1.6; font-size:15px;">
+        Retira tu pedido en:<br/>
+        <strong style="font-size:17px;">${DIRECCION_SEDE}</strong>
+      </p>
+      <p style="margin:0 0 14px;">
+        <a href="${urlMapaSede}" style="display:inline-block; background:#1a73e8; color:#fff; text-decoration:none; padding:10px 18px; border-radius:6px; font-size:14px; font-weight:bold;">Ver en Google Maps</a>
+      </p>
+      <p style="margin:0; color:#555; line-height:1.5; font-size:13px;">
+        Cuando vengas, menciona tu número de pedido <strong>#${numeroPedido}</strong> y el nombre de quien compró.
+        Si tienes dudas sobre el horario, escríbenos por WhatsApp antes de venir.
+      </p>
+    </div>
+
+    <div style="margin-top:16px; padding:20px; background:#fff; border:1px solid #eee; border-radius:8px;">
+      <h3 style="font-size:14px; margin:0 0 8px; color:#111;">Datos de contacto</h3>
+      <p style="margin:0; color:#555; line-height:1.5; font-size:14px;">
+        ${envio.nombreReceptor || pedido.cliente.nombre}<br/>
+        ${envio.telefono || pedido.cliente.telefono || ""}
+      </p>
+    </div>`
+        : `
     <div style="margin-top:20px; padding:20px; background:#fff; border:1px solid #eee; border-radius:8px;">
       <h3 style="font-size:14px; margin:0 0 8px; color:#111;">Datos de envío</h3>
       <p style="margin:0; color:#555; line-height:1.5; font-size:14px;">
@@ -128,19 +158,7 @@ function construirHtmlConfirmacion(pedido) {
         ${envio.comuna || ""}, ${envio.region || ""}<br/>
         ${envio.telefono || pedido.cliente.telefono || ""}
       </p>
-    </div>
-
-    ${
-      pedido.metodoEnvio === "Retiro en sede"
-        ? `
-    <div style="margin-top:16px; padding:20px; background:#f0f7ff; border:1px solid #cfe3fb; border-radius:8px;">
-      <h3 style="font-size:14px; margin:0 0 8px; color:#111;">📍 Retiro en sede</h3>
-      <p style="margin:0; color:#555; line-height:1.5; font-size:14px;">
-        Puedes retirar tu pedido directamente en:<br/>
-        <strong>${DIRECCION_SEDE}</strong>
-      </p>
     </div>`
-        : ""
     }
 
     <p style="text-align:center; color:#999; font-size:12px; margin-top:24px;">
@@ -156,20 +174,26 @@ function construirHtmlConfirmacion(pedido) {
 // No es tributario. Si falla el envío, NUNCA debe romper
 // el flujo de pago: el pedido ya quedó pagado en la BD.
 
+// Devuelve { ok, motivo }: el flujo de pago lo ignora, pero el botón
+// "Reenviar correo" del admin lo usa para avisar qué falló.
 export async function enviarCorreoConfirmacionCompra(pedido) {
   try {
     if (!transporter) {
       console.warn(
         "SMTP no configurado (faltan SMTP_HOST/SMTP_USER/SMTP_PASS): se omite el correo de confirmación"
       );
-      return;
+      return {
+        ok: false,
+        motivo:
+          "El correo no está configurado en el servidor (faltan SMTP_HOST, SMTP_USER o SMTP_PASS)",
+      };
     }
 
     if (!pedido?.cliente?.email) {
       console.warn(
         "Pedido sin email de cliente, se omite el correo de confirmación"
       );
-      return;
+      return { ok: false, motivo: "El pedido no tiene correo del cliente" };
     }
 
     const numeroPedido = pedido._id
@@ -188,11 +212,18 @@ export async function enviarCorreoConfirmacionCompra(pedido) {
     console.log(
       `Correo de confirmación enviado a ${pedido.cliente.email} (pedido ${pedido._id}, messageId: ${info.messageId})`
     );
+
+    return { ok: true };
   } catch (error) {
     // Nunca se relanza: un correo fallido no debe afectar el pago ya procesado.
     console.error(
       `Error inesperado enviando correo de confirmación (pedido ${pedido?._id}):`,
       error
     );
+
+    return {
+      ok: false,
+      motivo: error?.message || "No se pudo enviar el correo",
+    };
   }
 }

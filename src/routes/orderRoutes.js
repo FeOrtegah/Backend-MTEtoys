@@ -11,6 +11,8 @@ import {
   markAsShipped,
   hardDeleteOrder,
   marcarAvisoWhatsapp,
+  obtenerInfoRetiro,
+  reenviarCorreoConfirmacion,
 } from "../controllers/orderController.js";
 
 import {
@@ -38,6 +40,25 @@ router.post("/", createOrder);
 router.patch(
   "/:id/aviso-whatsapp",
   marcarAvisoWhatsapp
+);
+
+
+// =====================================================
+// DÓNDE RETIRAR (público)
+// =====================================================
+
+router.get("/:id/retiro", obtenerInfoRetiro);
+
+
+// =====================================================
+// REENVIAR CORREO DE CONFIRMACIÓN (solo admin)
+// =====================================================
+
+router.post(
+  "/:id/reenviar-correo",
+  protegerRuta,
+  soloAdmin,
+  reenviarCorreoConfirmacion
 );
 
 

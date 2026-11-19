@@ -608,3 +608,79 @@ export const marcarAvisoWhatsapp = async (req, res) => {
     return res.status(500).json({ message: "Error al registrar el aviso" });
   }
 };
+
+
+// =====================================================
+// DÓNDE RETIRAR (PÚBLICO)
+// =====================================================
+// IMPORTANTE: la dirección exacta de la sede NUNCA se muestra en el
+// sitio (el soporte de la plataforma pidió quitarla). Solo viaja en el
+// correo de confirmación. Este endpoint solo le dice a la página de
+// resultado si el pedido es de retiro, para mostrar un aviso sin
+// dirección. No se puede adivinar el id (ObjectId) de un pedido.
+
+export const obtenerInfoRetiro = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.json({ retiro: false });
+    }
+
+    const pedido = await Order.findById(id).select(
+      "metodoEnvio estado"
+    );
+
+    if (
+      !pedido ||
+      pedido.metodoEnvio !== "Retiro en sede" ||
+      pedido.estado === "cancelado"
+    ) {
+      return res.json({ retiro: false });
+    }
+
+    return res.json({
+      retiro: true,
+      numeroPedido: pedido._id.toString().slice(-8).toUpperCase(),
+    });
+  } catch (error) {
+    console.error("Error al obtener info de retiro:", error);
+    return res.json({ retiro: false });
+  }
+};
+
+
+// =====================================================
+// REENVIAR CORREO DE CONFIRMACIÓN (SOLO ADMIN)
+// =====================================================
+
+export const reenviarCorreoConfirmacion = async (req, res) => {
+  try {
+    const pedido = await Order.findById(req.params.id);
+
+    if (!pedido) {
+      return res.status(404).json({ message: "Pedido no encontrado" });
+    }
+
+    if (pedido.estado === "pendiente" || pedido.estado === "cancelado") {
+      return res.status(400).json({
+        message: "Solo se puede reenviar el correo de pedidos pagados",
+      });
+    }
+
+    const resultado = await enviarCorreoConfirmacionCompra(pedido);
+
+    if (!resultado.ok) {
+      return res.status(502).json({
+        message: `No se pudo enviar el correo: ${resultado.motivo}`,
+      });
+    }
+
+    return res.json({
+      message: `Correo reenviado a ${pedido.cliente.email}`,
+    });
+  } catch (error) {
+    console.error("Error al reenviar correo:", error);
+    return res.status(500).json({ message: "Error al reenviar el correo" });
+  }
+};
