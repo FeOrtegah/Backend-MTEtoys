@@ -327,8 +327,12 @@ export const createOrder = async (req, res) => {
       fuera: ["Bluexpress", "Starken", "Chilexpress"],
     };
 
-    const metodosValidos = envioGratisPorMonto
-      ? ["Logística 360", "Envío gratis"]
+    // Todos los productos con envío gratis: aplica en cualquier zona
+    // (igual que el checkout), sin elegir método.
+    const metodosValidos = todosEnvioGratis
+      ? ["Envío gratis"]
+      : envioGratisPorMonto
+      ? ["Logística 360"]
       : METODOS_POR_ZONA[zonaEnvio] || [];
 
     if (!metodosValidos.includes(metodoEnvioRecibido)) {

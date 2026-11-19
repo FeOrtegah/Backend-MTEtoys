@@ -20,6 +20,11 @@ export class CuponError extends Error {
 // el cupón para que la persona pueda volver a intentarlo.
 const MINUTOS_RESERVA_WEBPAY = 60;
 
+// Entre reservar el cupón y guardar el pedido pasan unos milisegundos:
+// un "pedido inexistente" solo se considera huérfano pasado este margen
+// (evita que un doble clic libere la reserva de la compra en curso).
+const SEGUNDOS_GRACIA_PEDIDO_NUEVO = 120;
+
 const MSG_NO_VALIDO = "El código no es válido o ya no está disponible";
 const MSG_YA_USADO = "Este cupón ya fue utilizado con tus datos";
 
@@ -200,6 +205,12 @@ const liberarObsoletas = async (filtro) => {
   for (const uso of usos) {
     const pedido = await Order.findById(uso.pedido);
 
+    const reservaReciente =
+      Date.now() - new Date(uso.createdAt).getTime() <
+      SEGUNDOS_GRACIA_PEDIDO_NUEVO * 1000;
+
+    if (!pedido && reservaReciente) continue;
+
     const obsoleta =
       !pedido ||
       pedido.estado === "cancelado" ||
@@ -259,6 +270,12 @@ export const reservarCupon = async ({ codigo, subtotal, cliente, pedidoId }) => 
   const descuento = calcularDescuento(cupon, subtotal);
 
   if (descuento <= 0) throw new CuponError(MSG_NO_VALIDO);
+
+  // Sin teléfono o dirección válidos no se podría controlar el "una vez
+  // por persona" (y un arreglo vacío rompería el índice único).
+  if (!id.rut || !id.email || !id.telefonos.length || !id.direcciones.length) {
+    throw new CuponError("Completa tus datos de contacto y envío para usar el cupón", 400);
+  }
 
   const hayCupoFiltro = {
     _id: cupon._id,

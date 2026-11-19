@@ -21,7 +21,7 @@ const router = Router();
 
 const validarLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 30,
+  limit: 30,
   message: {
     message: "Demasiados intentos, espera unos minutos e inténtalo de nuevo",
   },
