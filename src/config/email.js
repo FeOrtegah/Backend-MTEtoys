@@ -49,7 +49,8 @@ if (faltantes.length > 0) {
     `[correo] Faltan variables: ${faltantes.join(", ")}. No se enviarán correos hasta agregarlas y reiniciar la app.`
   );
 } else {
-  console.log(
+  // console.warn (no console.log): en cPanel solo stderr.log queda guardado
+  console.warn(
     `[correo] Variables cargadas (host ${process.env.SMTP_HOST}, puerto ${
       Number(process.env.SMTP_PORT) || 465
     }, secure ${process.env.SMTP_SECURE ?? "true (por defecto)"}, usuario ${process.env.SMTP_USER}). Probando conexión...`
@@ -57,7 +58,7 @@ if (faltantes.length > 0) {
 
   transporter
     .verify()
-    .then(() => console.log("[correo] Conexión SMTP OK: los correos se pueden enviar."))
+    .then(() => console.warn("[correo] Conexión SMTP OK: los correos se pueden enviar."))
     .catch((error) =>
       console.error(
         `[correo] No se pudo conectar o autenticar con el servidor de correo: ${error.message}`
